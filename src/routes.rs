@@ -30,10 +30,8 @@ impl From<Session> for SignInResponse {
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<i32>) -> Response {
     let figure = server_state.database.get_figure(&id).await;
     match figure {
-        Some(figure) => {
-            println!("{:?}", Json(&figure));
-            Json(figure).into_response()
-        },
+        Some(figure) =>
+            Json(figure).into_response(),
         None => StatusCode::NOT_FOUND.into_response()
     }
 }

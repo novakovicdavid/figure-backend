@@ -4,17 +4,21 @@ use async_trait::async_trait;
 use lazy_static::lazy_static;
 use log::error;
 use regex::Regex;
-use sea_query::{Expr, PostgresQueryBuilder, Query};
+use sea_query::{Expr, InsertStatement, PostgresQueryBuilder, Query};
 use sea_query_binder::SqlxBinder;
 use crate::entities::figure::{Figure, FigureDef};
+use crate::entities::user::{User, UserDef};
+use crate::entities::profile::{Profile, ProfileDef};
 use serde::{Deserialize};
 use sqlx::{Connection, PgConnection, PgPool, Pool, Postgres, Row};
 use unicode_segmentation::UnicodeSegmentation;
 use zeroize::Zeroize;
-use crate::auth_layer::hash_password;
+use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::profile::{ProfileDTO};
 use crate::entities::user::{UserDTO};
 use crate::server_errors::ServerError;
+use futures::future::ready;
+use futures::{FutureExt, TryFutureExt};
 
 #[derive(Deserialize)]
 pub struct SignUpForm {
@@ -32,7 +36,7 @@ pub struct SignInForm {
 #[async_trait]
 pub trait DatabaseFns: Sync + Send + Debug {
     async fn get_figure(&self, id: &i32) -> Option<Figure>;
-    // async fn signup_user(&self, signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError>;
+    async fn signup_user(&self, signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError>;
     // async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError>;
 }
 
@@ -53,6 +57,63 @@ impl DatabaseFns for DatabaseImpl {
             .limit(1)
             .build_sqlx(PostgresQueryBuilder);
         sqlx::query_as_with::<_, Figure, _>(&sql, values).fetch_one(&self.db).await.ok()
+    }
+
+    async fn signup_user(&self, mut signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError> {
+        if !is_email_valid(&signup.email) {
+            return Err(ServerError::InvalidEmail);
+        }
+        if !is_username_valid(&signup.username) {
+            return Err(ServerError::InvalidUsername);
+        }
+        let password_hash_result = hash_password(&signup.password, true);
+        signup.password.zeroize();
+        let password_hash = match password_hash_result {
+            Ok(hash) => hash,
+            Err(e) => return Err(e)
+        };
+
+        // Create User and Profile in database and return these
+        let transaction_result = self.db.begin().await;
+        let transaction = match transaction_result {
+            Ok(transaction) => transaction,
+            Err(_) => {
+                return Err(ServerError::InternalError);
+            }
+        };
+
+        let user_sql_statement_result: Result<User, ServerError> = async {
+            (Query::insert()
+                .into_table(UserDef::Table)
+                .columns([UserDef::Email, UserDef::Password, UserDef::Role])
+                .values([signup.email.into(), password_hash.into(), "user".into()])
+                .map_err(|error| Err(ServerError::InternalError))) as Result<&mut InsertStatement, ServerError>
+        }
+            .and_then(|statement: &mut InsertStatement| async {
+                let (sql, values) = statement.build_sqlx(PostgresQueryBuilder);
+                sqlx::query_as_with::<_, User, _>(&sql, values).fetch_one(&self.db).await.map_err(|error| Err(ServerError::InternalError))
+            }).await;
+
+
+        // let user = match user_sql_statement_result {
+        //     Ok(user) => user,
+        //     Err(e) =>
+        // }
+        Err(ServerError::InternalError)
+
+        // let (sql, values) = match user_sql_statement_result {
+        //     Ok(statement) => statement.build_sqlx(PostgresQueryBuilder),
+        //     Err(error) => {
+        //         println!("{}", error);
+        //         return Err(ServerError::InternalError);
+        //     }
+        // };
+        // let user = sqlx::query_as_with::<_, User, _>(&sql, values).fetch_one(&self.db).await;
+
+        // let profile_sql_statement_result = Query::insert()
+        //     .into_table(ProfileDef::Table)
+        //     .columns([ProfileDef::Username, ProfileDef::UserId])
+        //     .values([signup.username, ])
     }
 
     // async fn signup_user(&self, mut signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError> {

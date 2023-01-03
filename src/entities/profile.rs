@@ -1,6 +1,9 @@
 use serde::{Serialize};
+use sea_query::enum_def;
 
-#[derive(Serialize, Debug)]
+#[allow(dead_code)]
+#[enum_def(suffix = "Def")]
+#[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct Profile {
     pub id: i64,
     pub username: String,

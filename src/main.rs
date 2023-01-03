@@ -65,7 +65,7 @@ async fn main() {
         .allow_headers([ACCEPT, CONTENT_TYPE])
         .allow_origin(["http://localhost:3000".parse().unwrap()]);
 
-    // Struct containing state of user
+    // Struct containing optional user session from a request
     let user_id_extension = SessionOption {
         session: None
     };
