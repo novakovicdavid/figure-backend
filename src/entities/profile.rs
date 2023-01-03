@@ -2,15 +2,15 @@ use serde::{Serialize};
 
 #[derive(Serialize, Debug)]
 pub struct Profile {
-    pub id: i32,
+    pub id: i64,
     pub username: String,
     pub display_name: Option<String>,
-    pub user_id: i32,
+    pub user_id: i64,
 }
 
 #[derive(Serialize, Debug)]
 pub struct ProfileDTO {
-    pub id: i32,
+    pub id: i64,
     pub username: String,
     pub display_name: Option<String>,
 }

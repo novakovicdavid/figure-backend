@@ -1,4 +1,3 @@
-mod orm_entities;
 mod routes;
 mod database;
 mod session_store;
@@ -18,7 +17,7 @@ use axum::routing::post;
 use futures::FutureExt;
 use log::info;
 use crate::database::{Database, get_database_connection};
-use crate::routes::{get_figure, signin_user, signup_user};
+use crate::routes::{get_figure};
 use tower_http::cors::CorsLayer;
 use tower_cookies::CookieManagerLayer;
 use crate::auth_layer::authenticate;
@@ -82,8 +81,8 @@ async fn main() {
     info!("Setting up routes and layers...");
     let app = Router::new()
         .route("/figures/:id", get(get_figure))
-        .route("/users/signup", post(signup_user))
-        .route("/users/signin", post(signin_user))
+        // .route("/users/signup", post(signup_user))
+        // .route("/users/signin", post(signin_user))
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
         .layer(Extension(user_id_extension))
