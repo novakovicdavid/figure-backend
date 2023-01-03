@@ -35,7 +35,7 @@ pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): 
     }
 }
 
-pub async fn signin_user(Extension(session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(mut signin): Json<SignInForm>) -> Response {
+pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(mut signin): Json<SignInForm>) -> Response {
     return match server_state.database.authenticate_user_by_email(signin.email, signin.password).await {
         Ok(user) => {
             let session = server_state.session_store.create_session(user.0.id, user.1.id).await.unwrap();

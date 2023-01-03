@@ -1,13 +1,9 @@
-use std::error::Error;
 use std::fmt::{Debug};
-use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
-use argon2::Algorithm::Argon2id;
-use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use sea_orm::{ActiveModelTrait, ColumnTrait, Database as SeaOrmDatabase, DatabaseConnection, QueryFilter, TransactionTrait};
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use log::error;
-use rand_core::OsRng;
 use regex::Regex;
 use sea_orm::ActiveValue::Set;
 use crate::orm_entities::figure::Entity as FigureEntity;
@@ -21,8 +17,8 @@ use serde::{Deserialize};
 use unicode_segmentation::UnicodeSegmentation;
 use zeroize::Zeroize;
 use crate::auth_layer::hash_password;
-use crate::entities::profile::{Profile, ProfileDTO};
-use crate::entities::user::{User, UserDTO};
+use crate::entities::profile::{ProfileDTO};
+use crate::entities::user::{UserDTO};
 use crate::server_errors::ServerError;
 
 #[derive(Deserialize)]
@@ -191,8 +187,7 @@ impl DatabaseFns for DatabaseImpl {
             else {
                 return Err(ServerError::InternalError);
             }
-        }
-        else {
+        } else {
             Err(ServerError::WrongPassword)
         }
     }
@@ -200,7 +195,7 @@ impl DatabaseFns for DatabaseImpl {
 
 pub async fn get_database_connection(database_url: String) -> Database {
     let db: DatabaseConnection = SeaOrmDatabase::connect(database_url).await.unwrap();
-    return Box::new(DatabaseImpl {
+    Box::new(DatabaseImpl {
         db
-    });
+    })
 }
