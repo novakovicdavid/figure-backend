@@ -6,10 +6,11 @@ use uuid::Uuid;
 use redis::AsyncCommands;
 use crate::Session;
 use serde::{Serialize, Deserialize};
+use crate::entities::types::Id;
 
 #[async_trait]
 pub trait SessionStoreFns: Sync + Send {
-    async fn create_session(&self, user_id: i64, profile_id: i64) -> Result<Session, ()>;
+    async fn create_session(&self, user_id: Id, profile_id: Id) -> Result<Session, ()>;
     async fn get_data_of_session(&self, session_id: String) -> Result<SessionValueInStore, ()>;
     async fn get_sessions_of_user(&self);
 }
@@ -22,8 +23,8 @@ pub struct SessionStoreConnection {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SessionValueInStore {
-    pub user_id: i64,
-    pub profile_id: i64,
+    pub user_id: Id,
+    pub profile_id: Id,
 }
 
 impl SessionStoreConnection {
@@ -31,7 +32,7 @@ impl SessionStoreConnection {
         let client = redis::Client::open(store_url).unwrap();
         let connection = ConnectionManager::new(client).await.unwrap();
         Box::new(
-            SessionStoreConnection {
+            Self {
                 connection
             }
         )
@@ -40,12 +41,12 @@ impl SessionStoreConnection {
 
 #[async_trait]
 impl SessionStoreFns for SessionStoreConnection {
-    async fn create_session(&self, user_id: i64, profile_id: i64) -> Result<Session, ()> {
+    async fn create_session(&self, user_id: Id, profile_id: Id) -> Result<Session, ()> {
         let session_id = Uuid::new_v4().to_string();
         let session_value_json =
             match serde_json::to_string(&SessionValueInStore {
                 user_id,
-                profile_id: profile_id,
+                profile_id,
             }) {
                 Ok(json) => json,
                 Err(error) => {
@@ -61,8 +62,8 @@ impl SessionStoreFns for SessionStoreConnection {
         {
             Ok(_) => Ok(Session {
                 id: session_id,
-                user_id: user_id,
-                profile_id: profile_id,
+                user_id,
+                profile_id,
             }),
             Err(_) => Err(())
         }

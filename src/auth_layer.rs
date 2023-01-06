@@ -7,7 +7,6 @@ use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use lazy_static::lazy_static;
-use log::error;
 use rand_core::OsRng;
 use regex::Regex;
 use tower_cookies::Cookies;
@@ -61,27 +60,19 @@ pub fn hash_password(password: &str, with_checks: bool) -> Result<String, Server
 }
 
 pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cookies: Cookies, mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
-    match cookies.get("session_id") {
-        // If the session cookie exists
-        Some(cookie) => {
-            let session_id = cookie.value();
-            // Get the user id associated with the session from the session store
-            match server_state.session_store.get_data_of_session(session_id.to_string()).await {
-                // If a session is found (and thus hasn't expired
-                Ok(session_value) => {
-                    // Pass it to the extension so that handlers/extractors can access it
-                    req.extensions_mut().insert(SessionOption {
-                        session: Some(Session {
-                            id: session_id.to_string(),
-                            user_id: session_value.user_id,
-                            profile_id: session_value.profile_id,
-                        })
-                    });
-                }
-                Err(_) => {}
-            }
+    if let Some(cookie) = cookies.get("session_id") {
+        let session_id = cookie.value();
+        // Get the user id associated with the session from the session store
+        if let Ok(session_value) = server_state.session_store.get_data_of_session(session_id.to_string()).await {
+            // Pass it to the extension so that handlers/extractors can access it
+            req.extensions_mut().insert(SessionOption {
+                session: Some(Session {
+                    id: session_id.to_string(),
+                    user_id: session_value.user_id,
+                    profile_id: session_value.profile_id,
+                })
+            });
         }
-        None => {}
     }
 
     Ok(next.run(req).await)

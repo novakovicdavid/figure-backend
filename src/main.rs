@@ -21,6 +21,7 @@ use crate::routes::{get_figure, signin_user, signup_user};
 use tower_http::cors::CorsLayer;
 use tower_cookies::CookieManagerLayer;
 use crate::auth_layer::authenticate;
+use crate::entities::types::Id;
 use crate::session_store::{SessionStore, SessionStoreConnection};
 
 pub struct ServerState {
@@ -31,8 +32,8 @@ pub struct ServerState {
 #[derive(Clone, Debug)]
 pub struct Session {
     id: String,
-    user_id: i64,
-    profile_id: i64,
+    user_id: Id,
+    profile_id: Id,
 }
 
 #[derive(Clone, Debug)]
@@ -44,6 +45,7 @@ pub struct SessionOption {
 async fn main() {
     let time_to_start = Instant::now();
     env_logger::init();
+
 
     info!("Connecting to database...");
     let database = get_database_connection(env::var("DATABASE_URL").unwrap())

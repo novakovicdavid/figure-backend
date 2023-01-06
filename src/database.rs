@@ -1,20 +1,15 @@
 use std::fmt::{Debug};
-use argon2::{PasswordHash, PasswordVerifier};
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
-use sea_query::{Alias, Expr, InsertStatement, PostgresQueryBuilder, Query};
-use sea_query_binder::SqlxBinder;
 use crate::entities::figure::{Figure, FigureDef};
-use crate::entities::user::{User, UserAndProfile, UserDef};
-use crate::entities::profile::ProfileDef;
+use crate::entities::user::{UserAndProfile};
 use serde::{Deserialize};
-use sqlx::{Column, Error, PgPool, Pool, Postgres, Row};
+use sqlx::{Error, PgPool, Pool, Postgres};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::profile::{ProfileDTO};
 use crate::entities::user::{UserDTO};
 use crate::server_errors::ServerError;
-use futures::future::ready;
-use futures::{TryFutureExt};
 use crate::entities::types::Id;
 
 #[derive(Deserialize)]
@@ -47,19 +42,17 @@ struct DatabaseImpl {
 #[async_trait]
 impl DatabaseFns for DatabaseImpl {
     async fn get_figure(&self, id: &i32) -> Result<Figure, ServerError<String>> {
-        let (sql, values) = Query::select()
-            .columns([FigureDef::Id, FigureDef::Title, FigureDef::Width, FigureDef::Height, FigureDef::ProfileId])
-            .from(FigureDef::Table)
-            .and_where(Expr::col(FigureDef::Id).eq(*id))
-            .limit(1)
-            .build_sqlx(PostgresQueryBuilder);
-        match sqlx::query_as_with::<_, Figure, _>(&sql, values).fetch_one(&self.db).await {
+        let query =
+            sqlx::query_as::<_, Figure>(&format!("SELECT * from {} where {} = $1", FigureDef::Table, FigureDef::Id))
+                .bind(id)
+                .fetch_one(&self.db).await;
+        match query {
             Ok(figure) => Ok(figure),
-
             Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
+
 
     async fn signup_user(&self, mut signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError<String>> {
         if !is_email_valid(&signup.email) {
@@ -75,7 +68,6 @@ impl DatabaseFns for DatabaseImpl {
             Err(e) => return Err(e)
         };
 
-        // Create User and Profile in database and return these
         let transaction_result = self.db.begin().await;
         let mut transaction = match transaction_result {
             Ok(transaction) => transaction,
@@ -84,66 +76,37 @@ impl DatabaseFns for DatabaseImpl {
             }
         };
 
-        // Create a user, dealing with any value parsing & database errors
-        let user_id_result = ready(Query::insert()
-            .into_table(UserDef::Table)
-            .columns([UserDef::Email, UserDef::Password, UserDef::Role])
-            .returning(Query::returning().column(UserDef::Id))
-            .values([signup.email.to_lowercase().into(), password_hash.into(), "user".into()])
-            .map_err(|e| ServerError::InternalError(e.to_string())))
-            .and_then(|statement: &mut InsertStatement| async {
-                // Build and execute query
-                let (sql, values) = statement.build_sqlx(PostgresQueryBuilder);
-                sqlx::query_with(&sql, values)
-                    .fetch_one(&mut transaction)
-                    .await
-                    .map(|row| row.get::<Id, _>(0))
-                    .map_err(|e| ServerError::InternalError(e.to_string()))
-            }).await;
+        // Create a user
+        let user_id_result = sqlx::query_as::<_, Id>(r#"
+            INSERT INTO users (email, password, role)
+            VALUES ($1, $2, 'user')
+            RETURNING id"#)
+            .bind(&signup.email)
+            .bind(password_hash)
+            .fetch_one(&mut transaction).await;
 
         let user_id = match user_id_result {
             Ok(user_id) => user_id,
             Err(e) => {
-                return Err(e);
+                return Err(ServerError::InternalError(e.to_string()));
             }
         };
 
-        let profile_id_result = ready(Query::insert()
-            .into_table(ProfileDef::Table)
-            .columns([ProfileDef::Username, ProfileDef::UserId])
-            .returning(Query::returning().column(UserDef::Id))
-            .values([signup.username.to_lowercase().into(), user_id.into()])
-            .map_err(|e| ServerError::InternalError(e.to_string())))
-            .and_then(|statement: &mut InsertStatement| async {
-                // Build and execute query
-                let (sql, values) = statement.build_sqlx(PostgresQueryBuilder);
-                sqlx::query_with(&sql, values)
-                    .fetch_one(&mut transaction)
-                    .await
-                    .map(|row| row.get::<Id, _>(0))
-                    .map_err(|e| ServerError::InternalError(e.to_string()))
-            }).await;
+        // Create a profile
+        let profile_id_result = sqlx::query_as::<_, Id>(r#"
+            INSERT INTO profiles (username, user_id)
+            VALUES ($1, $2)
+            RETURNING id"#)
+            .bind(&signup.username)
+            .bind(user_id.0)
+            .fetch_one(&mut transaction).await;
+
         let profile_id = match profile_id_result {
             Ok(profile_id) => profile_id,
             Err(e) => {
-                return Err(e);
+                return Err(ServerError::InternalError(e.to_string()));
             }
         };
-
-        let (sql, values) = Query::select()
-            .expr(Expr::asterisk())
-            .from(UserDef::Table)
-            .build_sqlx(PostgresQueryBuilder);
-        let query = sqlx::query_as_with::<_, User, _>(&sql, values)
-            .fetch_one(&mut transaction).await;
-        match query {
-            Ok(user) => {
-                println!("{:?}", user);
-            }
-            Err(e) => {
-                println!("{}", e);
-            }
-        }
 
         match transaction.commit().await {
             Ok(()) => Ok((
@@ -163,93 +126,40 @@ impl DatabaseFns for DatabaseImpl {
     }
 
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError<String>> {
-        let (sql, values) = Query::select()
-            .expr_as(Expr::col((UserDef::Table, UserDef::Id)), Alias::new("user_id"))
-            .columns([UserDef::Email, UserDef::Password, UserDef::Role])
-            .column((ProfileDef::Table, ProfileDef::Id))
-            .columns([ProfileDef::Username, ProfileDef::DisplayName])
-            .from(UserDef::Table)
-            .inner_join(ProfileDef::Table, Expr::col((UserDef::Table, UserDef::Id)).equals((ProfileDef::Table, ProfileDef::UserId)))
-            .and_where(Expr::col(UserDef::Email).eq(email.to_lowercase()))
-            .build_sqlx(PostgresQueryBuilder);
-        let result = sqlx::query_as_with::<_, UserAndProfile, _>(&sql, values)
-            .fetch_all(&self.db)
-            .await;
+        let user_profile_result = sqlx::query_as::<_, UserAndProfile>(r#"
+        SELECT profiles.id AS profile_id, users.id AS user_id, users.email, users.password, users.role, profiles.username, profiles.display_name
+        FROM users
+        INNER JOIN profiles
+        ON users.id = profiles.user_id
+        WHERE users.email = $1
+        "#)
+            .bind(email)
+            .fetch_one(&self.db).await;
+        let (user, profile) = match user_profile_result {
+            Ok(user_and_profile) => (
+                user_and_profile.user,
+                user_and_profile.profile
+            ),
+            Err(Error::RowNotFound) => return Err(ServerError::ResourceNotFound),
+            Err(e) => return Err(ServerError::InternalError(e.to_string()))
+        };
 
-        match result {
-            Ok(pwu) => {
-                println!("{:?}", pwu);
-            }
+        let parsed_hash_result = PasswordHash::new(&user.password);
+        let parsed_hash = match parsed_hash_result {
+            Ok(hash) => hash,
             Err(e) => {
-                println!("{}", e);
+                return Err(ServerError::InternalError(e.to_string()));
             }
+        };
+
+        let password_verification = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
+        if password_verification.is_ok() {
+            Ok((
+                user.into(), profile.into()
+            ))
+        } else {
+            Err(ServerError::WrongPassword)
         }
-
-        // match result {
-        //     Ok(vec) => {
-        //         println!("{}", vec.len());
-        //         for row in vec {
-        //             row.get()
-        //     }
-        //     Err(e) => {
-        //         println!("{}", e);
-        //     }
-        // }
-
-
-        Err(ServerError::InvalidEmail)
-
-        //     let user_result = UserEntity::find()
-        //         .filter(user::Column::Email.eq(email.to_lowercase()))
-        //         .find_also_related(ProfileEntity)
-        //         .one(&self.db)
-        //         .await;
-        //     let user_option = match user_result {
-        //         Ok(user_option) => user_option,
-        //         Err(error) => {
-        //             error!("{}", error);
-        //             return Err(ServerError::InternalError);
-        //         }
-        //     };
-        //
-        //     let found_user = match user_option {
-        //         Some(found_user) => found_user,
-        //         None => return Err(ServerError::UserWithEmailNotFound)
-        //     };
-        //
-        //     let parsed_hash_result = PasswordHash::new(&found_user.0.password);
-        //     let parsed_hash = match parsed_hash_result {
-        //         Ok(hash) => hash,
-        //         Err(e) => {
-        //             error!("{}", e);
-        //             return Err(ServerError::InternalError);
-        //         }
-        //     };
-        //
-        //     let password_verification = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
-        //     if password_verification.is_ok() {
-        //         if let Some(profile) = found_user.1 {
-        //             Ok((
-        //                 UserDTO {
-        //                     email: found_user.0.email,
-        //                     role: found_user.0.role,
-        //                     id: found_user.0.id,
-        //                 },
-        //                 ProfileDTO {
-        //                     id: profile.id,
-        //                     username: profile.username,
-        //                     display_name: profile.display_name,
-        //                 }
-        //             ))
-        //         }
-        //         // If no profile associated with user is found
-        //         else {
-        //             return Err(ServerError::InternalError);
-        //         }
-        //     } else {
-        //         Err(ServerError::WrongPassword)
-        //     }
-        // }
     }
 }
 

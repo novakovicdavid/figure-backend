@@ -1,14 +1,13 @@
 use serde::{Serialize};
-use sea_query::enum_def;
 use crate::entities::types::Id;
 
-#[allow(dead_code)]
-#[enum_def(suffix = "Def")]
 #[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct Profile {
+    #[sqlx(flatten)]
     pub id: Id,
     pub username: String,
     pub display_name: Option<String>,
+    #[sqlx(flatten)]
     pub user_id: Id,
 }
 
@@ -19,12 +18,12 @@ pub struct ProfileDTO {
     pub display_name: Option<String>,
 }
 
-impl Profile {
-    pub fn into_dto(self) -> ProfileDTO {
-        ProfileDTO {
-            id: self.id,
-            username: self.username,
-            display_name: self.display_name
+impl From<Profile> for ProfileDTO {
+    fn from(profile: Profile) -> Self {
+        Self {
+            id: profile.id,
+            username: profile.username,
+            display_name: profile.display_name,
         }
     }
 }

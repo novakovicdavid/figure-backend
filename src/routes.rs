@@ -8,6 +8,7 @@ use crate::{ServerState, Session, SessionOption};
 use crate::database::{SignInForm, SignUpForm};
 use tower_cookies::{Cookie, Cookies};
 use cookie::{SameSite};
+use crate::entities::types::Id;
 
 #[derive(Serialize)]
 struct ErrorResponse<'a> {
@@ -16,7 +17,7 @@ struct ErrorResponse<'a> {
 
 #[derive(Serialize)]
 struct SignInResponse {
-    profile_id: i64,
+    profile_id: Id,
 }
 
 impl From<Session> for SignInResponse {
@@ -32,18 +33,23 @@ pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): 
     match figure {
         Ok(figure) =>
             Json(figure).into_response(),
-        Err(e) => (StatusCode::NOT_FOUND, Json(e.to_string())).into_response()
+        Err(e) => (
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse {
+                error: &e.to_string()
+            })
+        ).into_response()
     }
 }
 
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(mut signin): Json<SignInForm>) -> Response {
     return match server_state.database.authenticate_user_by_email(signin.email, signin.password).await {
-        Ok(user) => {
-            let session = server_state.session_store.create_session(user.0.id, user.1.id).await.unwrap();
+        Ok((user, profile)) => {
+            let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_same_site(SameSite::Strict);
             cookies.add(cookie);
-            Json(user.1).into_response()
+            Json(profile).into_response()
         }
         Err(e) => {
             (
@@ -53,7 +59,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
                 })
             ).into_response()
         }
-    }
+    };
 }
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
