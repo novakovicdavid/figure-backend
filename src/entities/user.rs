@@ -11,10 +11,6 @@ pub struct User {
     pub role: String,
 }
 
-pub enum UserDef {
-    Table,
-}
-
 #[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct UserAndProfileFromQuery {
     #[sqlx(flatten)]

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::{Extension, Json};
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
@@ -9,7 +8,6 @@ use crate::database::{SignInForm, SignUpForm};
 use tower_cookies::{Cookie, Cookies};
 use cookie::{SameSite};
 use crate::entities::types::Id;
-use crate::server_errors::ErrorResponse;
 
 #[derive(Serialize)]
 struct SignInResponse {
