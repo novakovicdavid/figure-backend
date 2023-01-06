@@ -9,11 +9,7 @@ use crate::database::{SignInForm, SignUpForm};
 use tower_cookies::{Cookie, Cookies};
 use cookie::{SameSite};
 use crate::entities::types::Id;
-
-#[derive(Serialize)]
-struct ErrorResponse<'a> {
-    error: &'a str,
-}
+use crate::server_errors::ErrorResponse;
 
 #[derive(Serialize)]
 struct SignInResponse {
@@ -33,16 +29,11 @@ pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): 
     match figure {
         Ok(figure) =>
             Json(figure).into_response(),
-        Err(e) => (
-            StatusCode::NOT_FOUND,
-            Json(ErrorResponse {
-                error: &e.to_string()
-            })
-        ).into_response()
+        Err(e) => e.into_response()
     }
 }
 
-pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(mut signin): Json<SignInForm>) -> Response {
+pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.database.authenticate_user_by_email(signin.email, signin.password).await {
         Ok((user, profile)) => {
             let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
@@ -51,20 +42,12 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
             cookies.add(cookie);
             Json(profile).into_response()
         }
-        Err(e) => {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: &e.to_string()
-                })
-            ).into_response()
-        }
+        Err(e) => e.into_response()
     };
 }
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    let result = server_state.database.signup_user(signup).await;
-    match result {
+    return match server_state.database.signup_user(signup).await {
         Ok((user, profile)) => {
             let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
@@ -72,13 +55,6 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
             cookies.add(cookie);
             Json(profile).into_response()
         }
-        Err(error) => {
-            (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: &error.to_string()
-                })
-            ).into_response()
-        }
+        Err(e) => e.into_response()
     }
 }

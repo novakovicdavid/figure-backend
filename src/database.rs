@@ -2,13 +2,13 @@ use std::fmt::{Debug};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
 use crate::entities::figure::{Figure, FigureDef};
-use crate::entities::user::{UserAndProfile};
+use crate::entities::user::{UserAndProfileFromQuery};
 use serde::{Deserialize};
 use sqlx::{Error, PgPool, Pool, Postgres};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
-use crate::entities::profile::{ProfileDTO};
-use crate::entities::user::{UserDTO};
+use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::user_dto::UserDTO;
 use crate::server_errors::ServerError;
 use crate::entities::types::Id;
 
@@ -81,14 +81,19 @@ impl DatabaseFns for DatabaseImpl {
             INSERT INTO users (email, password, role)
             VALUES ($1, $2, 'user')
             RETURNING id"#)
-            .bind(&signup.email)
+            .bind(&signup.email.to_lowercase())
             .bind(password_hash)
             .fetch_one(&mut transaction).await;
 
         let user_id = match user_id_result {
             Ok(user_id) => user_id,
             Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
+                return match ServerError::parse_db_error(&e) {
+                    ServerError::ConstraintError => {
+                        Err(ServerError::EmailAlreadyInUse)
+                    }
+                    _ => Err(ServerError::InternalError(e.to_string()))
+                };
             }
         };
 
@@ -104,7 +109,12 @@ impl DatabaseFns for DatabaseImpl {
         let profile_id = match profile_id_result {
             Ok(profile_id) => profile_id,
             Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
+                return match ServerError::parse_db_error(&e) {
+                    ServerError::ConstraintError => {
+                        Err(ServerError::UsernameAlreadyTaken)
+                    }
+                    _ => Err(ServerError::InternalError(e.to_string()))
+                };
             }
         };
 
@@ -126,7 +136,7 @@ impl DatabaseFns for DatabaseImpl {
     }
 
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError<String>> {
-        let user_profile_result = sqlx::query_as::<_, UserAndProfile>(r#"
+        let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
         SELECT profiles.id AS profile_id, users.id AS user_id, users.email, users.password, users.role, profiles.username, profiles.display_name
         FROM users
         INNER JOIN profiles

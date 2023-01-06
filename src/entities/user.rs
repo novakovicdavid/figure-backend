@@ -15,35 +15,10 @@ pub enum UserDef {
     Table,
 }
 
-// pub enum UserDef {
-//     Id,
-//     Email,
-//     Password,
-//     Role,
-// }
-
-#[allow(dead_code)]
 #[derive(Serialize, Debug, sqlx::FromRow)]
-pub struct UserAndProfile {
+pub struct UserAndProfileFromQuery {
     #[sqlx(flatten)]
     pub user: User,
     #[sqlx(flatten)]
     pub profile: Profile,
-}
-
-#[derive(Serialize, Debug)]
-pub struct UserDTO {
-    pub email: String,
-    pub role: String,
-    pub id: Id,
-}
-
-impl From<User> for UserDTO {
-    fn from(user: User) -> Self {
-        Self {
-            email: user.email,
-            role: user.role,
-            id: user.id,
-        }
-    }
 }
