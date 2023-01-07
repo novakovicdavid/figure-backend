@@ -65,7 +65,7 @@ async fn main() {
         .allow_credentials(true)
         .allow_methods([Method::GET, Method::POST])
         .allow_headers([ACCEPT, CONTENT_TYPE])
-        .allow_origin(["http://localhost:3000".parse().unwrap()]);
+        .allow_origin([env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string()).parse().unwrap()]);
 
     // Struct containing optional user session from a request
     let user_id_extension = SessionOption {
