@@ -85,7 +85,7 @@ async fn main() {
         .route("/figures/:id", get(get_figure))
         .route("/users/signup", post(signup_user))
         .route("/users/signin", post(signin_user))
-        .route("/session/signout", post(signout_user))
+        .route("/session/invalidate", post(signout_user))
         .route("/session/load", get(load_session))
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
