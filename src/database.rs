@@ -4,13 +4,14 @@ use async_trait::async_trait;
 use crate::entities::figure::{Figure, FigureDef};
 use crate::entities::user::{UserAndProfileFromQuery};
 use serde::{Deserialize};
-use sqlx::{Error, PgPool, Pool, Postgres};
+use sqlx::{Error, PgPool, Pool, Postgres, Row};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::user_dto::UserDTO;
+use crate::entities::profile::ProfileDef;
 use crate::server_errors::ServerError;
-use crate::entities::types::Id;
+use crate::entities::types::{Id, IdType};
 
 #[derive(Deserialize)]
 pub struct SignUpForm {
@@ -27,7 +28,8 @@ pub struct SignInForm {
 
 #[async_trait]
 pub trait DatabaseFns: Sync + Send + Debug {
-    async fn get_figure(&self, id: &i32) -> Result<Figure, ServerError<String>>;
+    async fn get_figure(&self, id: &IdType) -> Result<Figure, ServerError<String>>;
+    async fn get_profile_dto_by_id(&self, id: IdType) -> Result<ProfileDTO, ServerError<String>>;
     async fn signup_user(&self, signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError<String>>;
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError<String>>;
 }
@@ -41,13 +43,25 @@ struct DatabaseImpl {
 
 #[async_trait]
 impl DatabaseFns for DatabaseImpl {
-    async fn get_figure(&self, id: &i32) -> Result<Figure, ServerError<String>> {
+    async fn get_figure(&self, id: &IdType) -> Result<Figure, ServerError<String>> {
         let query =
             sqlx::query_as::<_, Figure>(&format!("SELECT * from {} where {} = $1", FigureDef::Table, FigureDef::Id))
                 .bind(id)
                 .fetch_one(&self.db).await;
         match query {
             Ok(figure) => Ok(figure),
+            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn get_profile_dto_by_id(&self, id: IdType) -> Result<ProfileDTO, ServerError<String>> {
+        let query =
+            sqlx::query_as::<_, ProfileDTO>(&format!("SELECT id, username, display_name from {} where {} = $1", ProfileDef::Table, ProfileDef::Id))
+                .bind(id)
+                .fetch_one(&self.db).await;
+        match query {
+            Ok(profile) => Ok(profile),
             Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }

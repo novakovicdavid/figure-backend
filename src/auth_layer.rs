@@ -63,7 +63,7 @@ pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cooki
     if let Some(cookie) = cookies.get("session_id") {
         let session_id = cookie.value();
         // Get the user id associated with the session from the session store
-        if let Ok(session_value) = server_state.session_store.get_data_of_session(session_id.to_string()).await {
+        if let Ok(session_value) = server_state.session_store.get_data_of_session(session_id).await {
             // Pass it to the extension so that handlers/extractors can access it
             req.extensions_mut().insert(SessionOption {
                 session: Some(Session {

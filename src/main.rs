@@ -17,7 +17,7 @@ use axum::routing::post;
 use futures::FutureExt;
 use log::info;
 use crate::database::{Database, get_database_connection};
-use crate::routes::{get_figure, signin_user, signup_user};
+use crate::routes::{get_figure, load_session, signin_user, signout_user, signup_user};
 use tower_http::cors::CorsLayer;
 use tower_cookies::CookieManagerLayer;
 use crate::auth_layer::authenticate;
@@ -85,6 +85,8 @@ async fn main() {
         .route("/figures/:id", get(get_figure))
         .route("/users/signup", post(signup_user))
         .route("/users/signin", post(signin_user))
+        .route("/session/signout", post(signout_user))
+        .route("/session/load", get(load_session))
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
         .layer(Extension(user_id_extension))
@@ -93,7 +95,7 @@ async fn main() {
         .with_state(server_state);
 
     info!("Starting Axum...");
-    let server_port = env::var("SERVER_PORT").unwrap_or("8000".to_string()).parse::<i32>().unwrap();
+    let server_port = env::var("SERVER_PORT").unwrap_or_else(|_| "8000".to_string()).parse::<i32>().unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], env::var("SERVER_PORT").unwrap_or("8000".to_string()).parse().unwrap()));
     let axum_server = axum::Server::bind(&addr)
         .serve(app.into_make_service());

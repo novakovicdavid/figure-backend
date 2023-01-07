@@ -2,8 +2,9 @@ use serde::Serialize;
 use crate::entities::profile::Profile;
 use crate::entities::types::Id;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct ProfileDTO {
+    #[sqlx(flatten)]
     pub id: Id,
     pub username: String,
     pub display_name: Option<String>,

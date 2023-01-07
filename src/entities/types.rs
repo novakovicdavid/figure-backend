@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use serde::{Serialize, Deserialize};
 use sqlx::{Error, FromRow, Row, Type};
 use sqlx::postgres::PgRow;
@@ -16,5 +17,12 @@ impl FromRow<'_, PgRow> for Id {
             Ok(id) => Ok(Id(id)),
             Err(e) => Err(e)
         }
+    }
+}
+
+impl Deref for Id {
+    type Target = IdType;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
