@@ -24,6 +24,10 @@ impl From<Session> for SignInResponse {
     }
 }
 
+pub async fn healthcheck() -> Response {
+    StatusCode::OK.into_response()
+}
+
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
     let figure = server_state.database.get_figure(&id).await;
     match figure {

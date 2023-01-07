@@ -17,7 +17,7 @@ use axum::routing::post;
 use futures::FutureExt;
 use log::info;
 use crate::database::{Database, get_database_connection};
-use crate::routes::{get_figure, load_session, signin_user, signout_user, signup_user};
+use crate::routes::{get_figure, healthcheck, load_session, signin_user, signout_user, signup_user};
 use tower_http::cors::CorsLayer;
 use tower_cookies::CookieManagerLayer;
 use crate::auth_layer::authenticate;
@@ -82,6 +82,7 @@ async fn main() {
 
     info!("Setting up routes and layers...");
     let app = Router::new()
+        .route("/healthcheck", get(healthcheck))
         .route("/figures/:id", get(get_figure))
         .route("/users/signup", post(signup_user))
         .route("/users/signin", post(signin_user))
