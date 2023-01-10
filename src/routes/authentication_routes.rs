@@ -1,14 +1,14 @@
 use std::sync::Arc;
-use axum::extract::{Path, State};
 use axum::{Extension, Json};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use cookie::{Cookie, SameSite};
 use serde::Serialize;
+use tower_cookies::Cookies;
+use crate::entities::types::Id;
 use crate::{ServerState, Session, SessionOption};
 use crate::database::{SignInForm, SignUpForm};
-use tower_cookies::{Cookie, Cookies};
-use cookie::{SameSite};
-use crate::entities::types::{Id, IdType};
 use crate::server_errors::ServerError;
 
 #[derive(Serialize)]
@@ -21,19 +21,6 @@ impl From<Session> for SignInResponse {
         SignInResponse {
             profile_id: session.profile_id,
         }
-    }
-}
-
-pub async fn healthcheck() -> Response {
-    StatusCode::OK.into_response()
-}
-
-pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
-    let figure = server_state.database.get_figure(&id).await;
-    match figure {
-        Ok(figure) =>
-            Json(figure).into_response(),
-        Err(e) => e.into_response()
     }
 }
 

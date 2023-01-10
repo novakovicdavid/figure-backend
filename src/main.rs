@@ -1,9 +1,9 @@
-mod routes;
 mod database;
 mod session_store;
 mod auth_layer;
 mod entities;
 mod server_errors;
+mod routes;
 
 use std::env;
 use std::net::SocketAddr;
@@ -17,11 +17,13 @@ use axum::routing::post;
 use futures::FutureExt;
 use log::info;
 use crate::database::{Database, get_database_connection};
-use crate::routes::{get_figure, healthcheck, load_session, signin_user, signout_user, signup_user};
 use tower_http::cors::CorsLayer;
 use tower_cookies::CookieManagerLayer;
 use crate::auth_layer::authenticate;
 use crate::entities::types::Id;
+use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
+use crate::routes::figure_routes::get_figure;
+use crate::routes::misc_routes::healthcheck;
 use crate::session_store::{SessionStore, SessionStoreConnection};
 
 pub struct ServerState {
