@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres"] }
 tokio = { version = "1", features = ["full"] }
-#anyhow = "1.0.67"
+anyhow = "1.0.67"
 axum = "0.6.1"
 axum-macros = "0.3.0"
 tower-http = { version = "0.3.5", features = ["cors"] }
@@ -31,6 +31,7 @@ uuid = { version = "1.2.2", features = [
     "fast-rng", # Use a faster (but still sufficiently random) RNG
     "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ] }
+url = "2.3.1"
 futures = "0.3.25"
 
 [profile.dev.package.sqlx-macros]
