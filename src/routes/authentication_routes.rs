@@ -29,6 +29,8 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
         Ok((user, profile)) => {
             let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
+            cookie.set_http_only(true);
+            cookie.set_secure(true);
             cookie.set_same_site(SameSite::Strict);
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
@@ -44,6 +46,8 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
         Ok((user, profile)) => {
             let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
+            cookie.set_http_only(true);
+            cookie.set_secure(true);
             cookie.set_same_site(SameSite::Strict);
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
@@ -58,6 +62,8 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
     if let Some(mut cookie) = cookies.get("session_id") {
         match server_state.session_store.invalidate_session(cookie.value()).await {
             Ok(_) => {
+                cookie.set_http_only(true);
+                cookie.set_secure(true);
                 cookie.set_same_site(SameSite::Strict);
                 cookie.set_domain(server_state.domain.to_string());
                 cookie.set_path("/");
