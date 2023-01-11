@@ -75,7 +75,7 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
         }
     }
     else {
-        ServerError::NoSessionFound.into_response()
+        ServerError::NoSessionReceived.into_response()
     }
 }
 
@@ -95,6 +95,6 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
         }
     }
     else {
-        ServerError::NoSessionFound.into_response()
+        ServerError::NoSessionReceived.into_response()
     }
 }

@@ -19,7 +19,10 @@ pub enum ServerError<T: ToString> {
     WrongPassword,
     ResourceNotFound,
     ConstraintError,
+    // No session found in datastore
     NoSessionFound,
+    // No session cookie received
+    NoSessionReceived,
     InternalError(T)
 }
 
@@ -42,6 +45,7 @@ impl Display for ServerError<String> {
             ServerError::ResourceNotFound => "resource-not-found",
             ServerError::ConstraintError => "constraint-error",
             ServerError::NoSessionFound => "no-session-found",
+            ServerError::NoSessionReceived => "no-session-received",
             ServerError::InternalError(error) => {
                 error!("Internal server error: {}", error);
                 "internal-error"
@@ -75,6 +79,7 @@ impl ServerError<String> {
             ServerError::ResourceNotFound => StatusCode::BAD_REQUEST,
             ServerError::ConstraintError => StatusCode::BAD_REQUEST,
             ServerError::NoSessionFound => StatusCode::BAD_REQUEST,
+            ServerError::NoSessionReceived => StatusCode::OK,
             ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR
         };
         (
