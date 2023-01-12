@@ -1,4 +1,5 @@
 use serde::Serialize;
+use serde_json::json;
 use crate::entities::profile::Profile;
 use crate::entities::types::Id;
 
@@ -8,6 +9,14 @@ pub struct ProfileDTO {
     pub id: Id,
     pub username: String,
     pub display_name: Option<String>,
+}
+
+impl ProfileDTO {
+    pub fn to_json(&self) -> String {
+        json!({
+            "profile": &self
+        }).to_string()
+    }
 }
 
 impl From<Profile> for ProfileDTO {

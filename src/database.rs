@@ -1,7 +1,7 @@
 use std::fmt::{Debug};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
-use crate::entities::figure::{Figure, FigureDef};
+use crate::entities::figure::{Figure};
 use crate::entities::user::{UserAndProfileFromQuery};
 use serde::{Deserialize};
 use sqlx::{Error, PgPool, Pool, Postgres, Row};
@@ -45,7 +45,14 @@ struct DatabaseImpl {
 impl DatabaseFns for DatabaseImpl {
     async fn get_figure(&self, id: &IdType) -> Result<Figure, ServerError<String>> {
         let query =
-            sqlx::query_as::<_, Figure>(&format!("SELECT * from {} where {} = $1", FigureDef::Table, FigureDef::Id))
+            sqlx::query_as::<_, Figure>(r#"
+            SELECT figures.id, figures.title, figures.description, figures.url, figures.width, figures.height, figures.profile_id,
+            profiles.username, profiles.display_name
+            from figures
+            INNER JOIN profiles
+            ON figures.id = profiles.id
+            where figures.id = $1
+            "#)
                 .bind(id)
                 .fetch_one(&self.db).await;
         match query {

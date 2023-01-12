@@ -35,7 +35,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            Json(profile).into_response()
+            profile.to_json().into_response()
         }
         Err(e) => e.into_response()
     };
@@ -52,7 +52,7 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            Json(profile).into_response()
+            profile.to_json().into_response()
         }
         Err(e) => e.into_response()
     }
@@ -85,7 +85,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
         match server_state.session_store.get_data_of_session(cookie.value()).await {
             Ok(session_data) => {
                 if let Ok(profile) = server_state.database.get_profile_dto_by_id(*session_data.profile_id).await {
-                    return Json(profile).into_response()
+                    return profile.to_json().into_response()
                 }
                 ServerError::ResourceNotFound.into_response()
             }
