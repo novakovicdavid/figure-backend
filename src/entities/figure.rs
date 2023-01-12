@@ -9,6 +9,7 @@ pub struct Figure {
     pub title: String,
     pub width: Option<i32>,
     pub height: Option<i32>,
+    pub url: String,
     #[sqlx(flatten)]
     pub profile_id: Id,
 }
