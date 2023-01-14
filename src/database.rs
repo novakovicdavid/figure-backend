@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use crate::entities::figure::{Figure};
 use crate::entities::user::{UserAndProfileFromQuery};
 use serde::{Deserialize};
-use sqlx::{Error, PgPool, Pool, Postgres, Row};
+use sqlx::{Error, PgPool, Pool, Postgres};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::dtos::profile_dto::ProfileDTO;
@@ -171,7 +171,7 @@ impl DatabaseFns for DatabaseImpl {
                 user_and_profile.user,
                 user_and_profile.profile
             ),
-            Err(Error::RowNotFound) => return Err(ServerError::ResourceNotFound),
+            Err(Error::RowNotFound) => return Err(ServerError::UserWithEmailNotFound),
             Err(e) => return Err(ServerError::InternalError(e.to_string()))
         };
 
