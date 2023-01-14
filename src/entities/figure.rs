@@ -1,4 +1,3 @@
-use std::fmt::{Display, Formatter};
 use serde::{Serialize};
 use serde_json::json;
 use crate::entities::dtos::profile_dto::ProfileDTO;

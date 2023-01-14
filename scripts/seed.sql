@@ -122,7 +122,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.user_i
 -- Data for Name: figures; Type: TABLE DATA; Schema: public; Owner: figure
 --
 
-INSERT INTO public.figures (id, title, width, height, profile_id, url, description) VALUES (2, 'first', 1268, 951, 1, 'https://i.imgur.com/XpNCV7a.jpg', NULL);
+INSERT INTO public.figures (id, title, width, height, profile_id, url, description) VALUES (1, 'first', 1268, 951, 1, 'https://i.imgur.com/XpNCV7a.jpg', NULL);
 
 
 --

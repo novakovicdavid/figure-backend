@@ -89,7 +89,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
                 }
                 ServerError::ResourceNotFound.into_response()
             }
-            Err(e) => {
+            Err(_e) => {
                 ServerError::NoSessionFound.into_response()
             }
         }
