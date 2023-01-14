@@ -194,8 +194,8 @@ impl DatabaseFns for DatabaseImpl {
     }
 }
 
-pub async fn get_database_connection(database_url: String) -> Database {
-    let db = PgPool::connect(&database_url).await.unwrap();
+pub async fn get_database_connection(database_url: &str) -> Database {
+    let db = PgPool::connect(database_url).await.unwrap();
     Box::new(DatabaseImpl {
         db
     })

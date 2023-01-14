@@ -30,7 +30,7 @@ pub struct SessionValueInStore {
 }
 
 impl SessionStoreConnection {
-    pub async fn new(store_url: String) -> SessionStore {
+    pub async fn new(store_url: &str) -> Box<Self> {
         let client = redis::Client::open(store_url).unwrap();
         let connection = ConnectionManager::new(client).await.unwrap();
         Box::new(
