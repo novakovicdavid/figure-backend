@@ -27,11 +27,11 @@ pub async fn browse_figures_from_profile(State(server_state): State<Arc<ServerSt
     browse_figures_with_parameters(State(server_state), None, Some(profile_id)).await
 }
 
-pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path((starting_from_figure_id, profile_id)): Path<(IdType, IdType)>) -> Response {
+pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path((profile_id, starting_from_figure_id)): Path<(IdType, IdType)>) -> Response {
     browse_figures_with_parameters(State(server_state), Some(starting_from_figure_id), Some(profile_id)).await
 }
 
-pub async fn browse_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
+async fn browse_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
     let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &1).await;
     match figures {
         Ok(figures) => {

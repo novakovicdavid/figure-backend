@@ -26,6 +26,7 @@ use crate::entities::types::IdType;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure};
 use crate::routes::misc_routes::healthcheck;
+use crate::routes::profile_routes::get_profile;
 use crate::session_store::{SessionStore, SessionStoreConnection};
 
 pub struct ServerState {
@@ -107,6 +108,7 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .route("/figures/browse/:starting_from_figure_id", get(browse_figures_starting_from_figure_id))
         .route("/profile/:profile_id/browse", get(browse_figures_from_profile))
         .route("/profile/:profile_id/browse/:starting_from_figure_id", get(browse_figures_from_profile_starting_from_figure_id))
+        .route("/profiles/:id", get(get_profile))
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
         .layer(Extension(authentication_extension))
