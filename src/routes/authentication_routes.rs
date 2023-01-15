@@ -6,14 +6,15 @@ use axum::response::{IntoResponse, Response};
 use cookie::{Cookie, SameSite};
 use serde::Serialize;
 use tower_cookies::Cookies;
-use crate::entities::types::Id;
 use crate::{ServerState, Session, SessionOption};
 use crate::database::{SignInForm, SignUpForm};
+use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 
 #[derive(Serialize)]
 struct SignInResponse {
-    profile_id: Id,
+    profile_id: IdType,
 }
 
 impl From<Session> for SignInResponse {
@@ -35,7 +36,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            profile.to_json().into_response()
+            ProfileDTO::from(profile).to_json().into_response()
         }
         Err(e) => e.into_response()
     };
@@ -52,7 +53,7 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            profile.to_json().into_response()
+            ProfileDTO::from(profile).to_json().into_response()
         }
         Err(e) => e.into_response()
     }
@@ -84,8 +85,8 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
     if let Some(cookie) = cookies.get("session_id") {
         match server_state.session_store.get_data_of_session(cookie.value()).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.database.get_profile_dto_by_id(*session_data.profile_id).await {
-                    return profile.to_json().into_response()
+                if let Ok(profile) = server_state.database.get_profile_by_id(session_data.profile_id).await {
+                    return ProfileDTO::from(profile).to_json().into_response()
                 }
                 ServerError::ResourceNotFound.into_response()
             }

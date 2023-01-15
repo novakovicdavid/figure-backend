@@ -2,16 +2,17 @@ use std::fmt::{Debug};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
 use crate::entities::figure::{Figure};
-use crate::entities::user::{UserAndProfileFromQuery};
+use crate::entities::user::{User, UserAndProfileFromQuery};
 use serde::{Deserialize};
-use sqlx::{Error, PgPool, Pool, Postgres};
+use sqlx::{Error, FromRow, PgPool, Pool, Postgres, Row};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
+use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::user_dto::UserDTO;
-use crate::entities::profile::ProfileDef;
+use crate::entities::profile::{Profile, ProfileDef};
 use crate::server_errors::ServerError;
-use crate::entities::types::{Id, IdType};
+use crate::entities::types::IdType;
 
 #[derive(Deserialize)]
 pub struct SignUpForm {
@@ -28,10 +29,11 @@ pub struct SignInForm {
 
 #[async_trait]
 pub trait DatabaseFns: Sync + Send + Debug {
-    async fn get_figure(&self, id: &IdType) -> Result<Figure, ServerError<String>>;
-    async fn get_profile_dto_by_id(&self, id: IdType) -> Result<ProfileDTO, ServerError<String>>;
-    async fn signup_user(&self, signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError<String>>;
-    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError<String>>;
+    async fn signup_user(&self, signup: SignUpForm) -> Result<(User, Profile), ServerError<String>>;
+    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
+    async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
+    async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
+    async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
 }
 
 pub type Database = Box<dyn DatabaseFns>;
@@ -43,39 +45,7 @@ struct DatabaseImpl {
 
 #[async_trait]
 impl DatabaseFns for DatabaseImpl {
-    async fn get_figure(&self, id: &IdType) -> Result<Figure, ServerError<String>> {
-        let query =
-            sqlx::query_as::<_, Figure>(r#"
-            SELECT figures.id, figures.title, figures.description, figures.url, figures.width, figures.height, figures.profile_id,
-            profiles.username, profiles.display_name
-            from figures
-            INNER JOIN profiles
-            ON figures.id = profiles.id
-            where figures.id = $1
-            "#)
-                .bind(id)
-                .fetch_one(&self.db).await;
-        match query {
-            Ok(figure) => Ok(figure),
-            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
-    }
-
-    async fn get_profile_dto_by_id(&self, id: IdType) -> Result<ProfileDTO, ServerError<String>> {
-        let query =
-            sqlx::query_as::<_, ProfileDTO>(&format!("SELECT id, username, display_name from {} where {} = $1", ProfileDef::Table, ProfileDef::Id))
-                .bind(id)
-                .fetch_one(&self.db).await;
-        match query {
-            Ok(profile) => Ok(profile),
-            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
-    }
-
-
-    async fn signup_user(&self, mut signup: SignUpForm) -> Result<(UserDTO, ProfileDTO), ServerError<String>> {
+    async fn signup_user(&self, mut signup: SignUpForm) -> Result<(User, Profile), ServerError<String>> {
         if !is_email_valid(&signup.email) {
             return Err(ServerError::InvalidEmail);
         }
@@ -98,7 +68,7 @@ impl DatabaseFns for DatabaseImpl {
         };
 
         // Create a user
-        let user_id_result = sqlx::query_as::<_, Id>(r#"
+        let user_id_result = sqlx::query(r#"
             INSERT INTO users (email, password, role)
             VALUES ($1, $2, 'user')
             RETURNING id"#)
@@ -107,7 +77,7 @@ impl DatabaseFns for DatabaseImpl {
             .fetch_one(&mut transaction).await;
 
         let user_id = match user_id_result {
-            Ok(user_id) => user_id,
+            Ok(user_id) => user_id.get(0),
             Err(e) => {
                 return match ServerError::parse_db_error(&e) {
                     ServerError::ConstraintError => {
@@ -119,16 +89,16 @@ impl DatabaseFns for DatabaseImpl {
         };
 
         // Create a profile
-        let profile_id_result = sqlx::query_as::<_, Id>(r#"
+        let profile_id_result = sqlx::query(r#"
             INSERT INTO profiles (username, user_id)
             VALUES ($1, $2)
             RETURNING id"#)
             .bind(&signup.username)
-            .bind(user_id.0)
+            .bind(user_id)
             .fetch_one(&mut transaction).await;
 
         let profile_id = match profile_id_result {
-            Ok(profile_id) => profile_id,
+            Ok(profile_id) => profile_id.get(0),
             Err(e) => {
                 return match ServerError::parse_db_error(&e) {
                     ServerError::ConstraintError => {
@@ -141,24 +111,27 @@ impl DatabaseFns for DatabaseImpl {
 
         match transaction.commit().await {
             Ok(()) => Ok((
-                UserDTO {
+                User {
                     email: signup.email,
+                    password: "".to_string(),
                     role: "user".to_string(),
                     id: user_id,
                 },
-                ProfileDTO {
+                Profile {
                     id: profile_id,
                     username: signup.username,
                     display_name: None,
+                    user_id,
                 }
             )),
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
 
-    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(UserDTO, ProfileDTO), ServerError<String>> {
+    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
         let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
-        SELECT profiles.id AS profile_id, users.id AS user_id, users.email, users.password, users.role, profiles.username, profiles.display_name
+        SELECT users.id AS user_id, users.email, users.password, users.role,
+        profiles.id AS profile_id, profiles.username, profiles.display_name
         FROM users
         INNER JOIN profiles
         ON users.id = profiles.user_id
@@ -190,6 +163,96 @@ impl DatabaseFns for DatabaseImpl {
             ))
         } else {
             Err(ServerError::WrongPassword)
+        }
+    }
+
+
+    async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>> {
+        let query =
+            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, user_id from {} where {} = $1", ProfileDef::Table, ProfileDef::Id))
+                .bind(id)
+                .fetch_one(&self.db).await;
+        match query {
+            Ok(profile) => Ok(profile),
+            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>> {
+        let query =
+            sqlx::query(r#"
+            SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.user_id
+            from figures
+            INNER JOIN profiles
+            ON figures.profile_id = profiles.id
+            where figures.id = $1
+            "#)
+                .bind(id)
+                .fetch_one(&self.db).await;
+        let row = match query {
+            Ok(row) => {
+                row
+            },
+            Err(Error::RowNotFound) => return Err(ServerError::ResourceNotFound),
+            Err(e) => return Err(ServerError::InternalError(e.to_string()))
+        };
+
+        let figure = Figure::from_row(&row);
+        let profile = Profile::from_row(&row);
+        let figure_profile = (figure, profile);
+
+        match figure_profile {
+            (Ok(figure), Ok(profile)) =>
+                Ok(FigureDTO::from(figure, ProfileDTO::from(profile))),
+            (_, _) => return Err(ServerError::InternalError("Could not get figure or profile from row".to_string()))
+        }
+    }
+
+    async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>> {
+        let mut query = r#"
+            SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.user_id
+            from figures
+            INNER JOIN profiles
+            ON figures.profile_id = profiles.id
+            "#.to_string();
+
+        if let Some(starting_from_id) = starting_from_id {
+            query = format!(r#"
+            {}
+            WHERE figures.id < {}
+            "#, query, starting_from_id);
+        }
+
+        if let Some(from_profile) = from_profile {
+            let mut filter = "figures.profile_id = ".to_string();
+            if starting_from_id.is_some() {
+                filter = format!("AND {}", filter);
+            }
+            else {
+                filter = format!("WHERE {}", filter);
+            }
+            query = format!(r#"
+            {}
+            {} {}
+            "#, query, filter, from_profile);
+        }
+
+        query = format!(r#"
+        {}
+        ORDER BY figures.id DESC
+        LIMIT {}
+        "#, query, limit);
+
+        println!("{}", query);
+
+        let result = sqlx::query_as::<_, FigureDTO>(&query).fetch_all(&self.db).await;
+        match result {
+            Ok(figures) => Ok(figures),
+            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
 }

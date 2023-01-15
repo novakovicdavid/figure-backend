@@ -6,12 +6,12 @@ use uuid::Uuid;
 use redis::AsyncCommands;
 use crate::Session;
 use serde::{Serialize, Deserialize};
-use crate::entities::types::Id;
+use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 
 #[async_trait]
 pub trait SessionStoreFns: Sync + Send {
-    async fn create_session(&self, user_id: Id, profile_id: Id) -> Result<Session, ()>;
+    async fn create_session(&self, user_id: IdType, profile_id: IdType) -> Result<Session, ()>;
     async fn get_data_of_session(&self, session_id: &str) -> Result<SessionValueInStore, ()>;
     async fn get_sessions_of_user(&self);
     async fn invalidate_session(&self, session_id: &str) -> Result<(), ServerError<String>>;
@@ -25,8 +25,8 @@ pub struct SessionStoreConnection {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SessionValueInStore {
-    pub user_id: Id,
-    pub profile_id: Id,
+    pub user_id: IdType,
+    pub profile_id: IdType,
 }
 
 impl SessionStoreConnection {
@@ -43,7 +43,7 @@ impl SessionStoreConnection {
 
 #[async_trait]
 impl SessionStoreFns for SessionStoreConnection {
-    async fn create_session(&self, user_id: Id, profile_id: Id) -> Result<Session, ()> {
+    async fn create_session(&self, user_id: IdType, profile_id: IdType) -> Result<Session, ()> {
         let session_id = Uuid::new_v4().to_string();
         let session_value_json =
             match serde_json::to_string(&SessionValueInStore {

@@ -22,9 +22,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
 use url::Url;
 use crate::auth_layer::authenticate;
-use crate::entities::types::Id;
+use crate::entities::types::IdType;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
-use crate::routes::figure_routes::get_figure;
+use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure};
 use crate::routes::misc_routes::healthcheck;
 use crate::session_store::{SessionStore, SessionStoreConnection};
 
@@ -37,8 +37,8 @@ pub struct ServerState {
 #[derive(Clone, Debug)]
 pub struct Session {
     id: String,
-    user_id: Id,
-    profile_id: Id,
+    user_id: IdType,
+    profile_id: IdType,
 }
 
 #[derive(Clone, Debug)]
@@ -98,11 +98,15 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
     Router::new()
         .route("/healthcheck", get(healthcheck))
-        .route("/figures/:id", get(get_figure))
         .route("/users/signup", post(signup_user))
         .route("/users/signin", post(signin_user))
         .route("/session/invalidate", post(signout_user))
         .route("/session/load", get(load_session))
+        .route("/figures/:id", get(get_figure))
+        .route("/figures/browse", get(browse_figures))
+        .route("/figures/browse/:starting_from_figure_id", get(browse_figures_starting_from_figure_id))
+        .route("/profile/:profile_id/browse", get(browse_figures_from_profile))
+        .route("/profile/:profile_id/browse/:starting_from_figure_id", get(browse_figures_from_profile_starting_from_figure_id))
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
         .layer(Extension(authentication_extension))

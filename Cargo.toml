@@ -9,7 +9,7 @@ edition = "2021"
 sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1.0.67"
-axum = "0.6.1"
+axum = { version = "0.6.2", features = ["multipart"] }
 axum-macros = "0.3.0"
 tower = "0.4.13"
 tower-http = { version = "0.3.5", features = ["cors"] }
@@ -34,6 +34,7 @@ uuid = { version = "1.2.2", features = [
 ] }
 url = "2.3.1"
 futures = "0.3.25"
+aws-sdk-s3 = "0.23.0"
 
 [dev-dependencies]
 hyper = "0.14.23"

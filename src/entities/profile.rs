@@ -1,15 +1,32 @@
 use serde::Serialize;
 use std::fmt::{Display, Formatter};
-use crate::entities::types::Id;
+use sqlx::{Error, FromRow, Row};
+use sqlx::postgres::PgRow;
+use crate::entities::types::IdType;
 
-#[derive(Serialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Debug)]
 pub struct Profile {
-    #[sqlx(flatten)]
-    pub id: Id,
+    pub id: IdType,
     pub username: String,
     pub display_name: Option<String>,
-    #[sqlx(flatten)]
-    pub user_id: Id,
+    pub user_id: IdType,
+}
+
+impl FromRow<'_, PgRow> for Profile {
+    fn from_row(row: &PgRow) -> Result<Self, Error> {
+        let id: IdType = row.try_get("profile_id")
+            .or_else(|_| row.try_get("id"))?;
+        let username: String = row.try_get("username")?;
+        let display_name: Option<String> = row.try_get("display_name")?;
+        let user_id: IdType = row.try_get("user_id")?;
+        
+        Ok(Profile {
+            id,
+            username,
+            display_name,
+            user_id,
+        })
+    }
 }
 
 pub enum ProfileDef {

@@ -1,13 +1,13 @@
 use serde::Serialize;
 use serde_json::json;
-use crate::entities::types::Id;
+use crate::entities::types::IdType;
 use crate::entities::user::User;
 
 #[derive(Serialize, Debug)]
 pub struct UserDTO {
     pub email: String,
     pub role: String,
-    pub id: Id,
+    pub id: IdType,
 }
 
 impl UserDTO {

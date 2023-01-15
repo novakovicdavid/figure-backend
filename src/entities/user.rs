@@ -1,11 +1,11 @@
 use serde::{Serialize};
 use crate::entities::profile::Profile;
-use crate::entities::types::Id;
+use crate::entities::types::IdType;
 
 #[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct User {
-    #[sqlx(flatten)]
-    pub id: Id,
+    #[sqlx(rename = "user_id")]
+    pub id: IdType,
     pub email: String,
     pub password: String,
     pub role: String,
