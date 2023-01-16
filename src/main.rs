@@ -76,13 +76,16 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let content_store = S3Storage::new_store();
 
     info!("Setting up CORS...");
-    let cors = create_app_cors([env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string()).parse()?]);
+    let origin = env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let cors = create_app_cors([origin.parse()?]);
+    info!("Allowed origin (CORS): {}", origin);
 
     // Struct containing optional user session from a request
     let authentication_extension = create_authentication_extension();
 
     let domain = Url::parse(&env::var("ORIGIN")
         .unwrap_or_else(|_| "http://localhost".to_string()))?.host_str().unwrap().to_string();
+    info!("Domain parsed from origin: {}", domain);
 
     info!("Waiting for stores...");
     let database = database.await;
