@@ -68,7 +68,7 @@ pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cooki
             req.extensions_mut().insert(SessionOption {
                 session: Some(Session {
                     id: session_id.to_string(),
-                    user_id: session_value.user_id,
+                    _user_id: session_value.user_id,
                     profile_id: session_value.profile_id,
                 })
             });

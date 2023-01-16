@@ -1,5 +1,4 @@
 use serde::{Serialize};
-use serde_json::{json, Value};
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
 use crate::entities::types::IdType;

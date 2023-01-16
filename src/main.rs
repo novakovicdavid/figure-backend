@@ -43,7 +43,7 @@ pub struct ServerState {
 #[derive(Clone, Debug)]
 pub struct Session {
     id: String,
-    user_id: IdType,
+    _user_id: IdType,
     profile_id: IdType,
 }
 

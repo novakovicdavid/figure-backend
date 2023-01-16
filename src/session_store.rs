@@ -64,7 +64,7 @@ impl SessionStoreFns for SessionStoreConnection {
         {
             Ok(_) => Ok(Session {
                 id: session_id,
-                user_id,
+                _user_id: user_id,
                 profile_id,
             }),
             Err(_) => Err(())

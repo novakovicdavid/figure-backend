@@ -1,6 +1,6 @@
 use serde::Serialize;
 use serde_json::{json, Value};
-use sqlx::{Error, FromRow, Row};
+use sqlx::{Error, FromRow};
 use sqlx::postgres::PgRow;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::figure::Figure;

@@ -11,7 +11,7 @@ pub struct UserDTO {
 }
 
 impl UserDTO {
-    pub fn to_json(&self) -> String {
+    pub fn _to_json(&self) -> String {
         json!({
             "user": &self
         }).to_string()

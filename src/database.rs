@@ -9,7 +9,6 @@ use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
-use crate::entities::dtos::user_dto::UserDTO;
 use crate::entities::profile::{Profile, ProfileDef};
 use crate::server_errors::ServerError;
 use crate::entities::types::IdType;

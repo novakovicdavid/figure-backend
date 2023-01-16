@@ -7,7 +7,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use image::GenericImageView;
-use serde_json::{json, Value};
+use serde_json::json;
 use uuid::Uuid;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
@@ -130,7 +130,7 @@ async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, By
 
     let (width, height) = match get_image_dimensions(&image) {
         Ok(tuple) => tuple,
-        Err(e) => {
+        Err(_e) => {
             return Err(ServerError::InvalidImage)?;
         }
     };
