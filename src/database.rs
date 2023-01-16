@@ -34,6 +34,7 @@ pub trait DatabaseFns: Sync + Send + Debug {
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
     async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
+    async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>>;
 }
 
 pub type Database = Box<dyn DatabaseFns>;
@@ -252,6 +253,31 @@ impl DatabaseFns for DatabaseImpl {
         match result {
             Ok(figures) => Ok(figures),
             Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>> {
+        let result =
+            sqlx::query(r#"
+            INSERT INTO figures (id, title, description, width, height, url, profile_id)
+            VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)
+            RETURNING id;
+            "#)
+                .bind(title)
+                .bind(description)
+                .bind(width)
+                .bind(height)
+                .bind(url)
+                .bind(profile_id)
+                .fetch_one(&self.db).await;
+        match result {
+            Ok(id) => {
+                match id.try_get(0) {
+                    Ok(id) => Ok(id),
+                    Err(e) => Err(ServerError::InternalError(e.to_string()))
+                }
+            },
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }

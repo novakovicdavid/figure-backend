@@ -5,12 +5,14 @@ mod entities;
 mod server_errors;
 mod routes;
 mod tests;
+mod content_store;
 
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use axum::{Extension, middleware, Router};
+use axum::extract::DefaultBodyLimit;
 use axum::http::header::{ACCEPT, CONTENT_TYPE};
 use axum::http::Method;
 use axum::routing::get;
@@ -20,11 +22,13 @@ use log::info;
 use crate::database::{Database, get_database_connection};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
+use tower_http::limit::RequestBodyLimitLayer;
 use url::Url;
 use crate::auth_layer::authenticate;
+use crate::content_store::{ContentStore, S3Storage};
 use crate::entities::types::IdType;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
-use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure};
+use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, upload_figure};
 use crate::routes::misc_routes::healthcheck;
 use crate::routes::profile_routes::get_profile;
 use crate::session_store::{SessionStore, SessionStoreConnection};
@@ -32,6 +36,7 @@ use crate::session_store::{SessionStore, SessionStoreConnection};
 pub struct ServerState {
     database: Database,
     session_store: SessionStore,
+    storage: ContentStore,
     domain: String,
 }
 
@@ -68,6 +73,8 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
             session_store
         });
 
+    let content_store = S3Storage::new_store();
+
     info!("Setting up CORS...");
     let cors = create_app_cors([env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string()).parse()?]);
 
@@ -80,7 +87,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     info!("Waiting for stores...");
     let database = database.await;
     let session_store = session_store.await;
-    let server_state = create_server_state(database, session_store, domain);
+    let server_state = create_server_state(database, session_store, content_store, domain);
 
     info!("Setting up routes and layers...");
     let app = create_app(server_state, cors, authentication_extension);
@@ -98,6 +105,12 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
 fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
     Router::new()
+        .route("/figures/upload", post(upload_figure))
+        // Disable the default limit
+        .layer(DefaultBodyLimit::disable())
+        // Set a different limit
+        .layer(RequestBodyLimitLayer::new(5 * 1000000))
+
         .route("/healthcheck", get(healthcheck))
         .route("/users/signup", post(signup_user))
         .route("/users/signin", post(signin_user))
@@ -117,10 +130,11 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .with_state(server_state)
 }
 
-fn create_server_state(database: Database, session_store: SessionStore, domain: String) -> Arc<ServerState> {
+fn create_server_state(database: Database, session_store: SessionStore, storage: ContentStore, domain: String) -> Arc<ServerState> {
     Arc::new(ServerState {
         database,
         session_store,
+        storage,
         domain,
     })
 }

@@ -23,6 +23,9 @@ pub enum ServerError<T: ToString> {
     NoSessionFound,
     // No session cookie received
     NoSessionReceived,
+    InvalidImage,
+    MissingFieldInForm,
+    InvalidMultipart,
     InternalError(T)
 }
 
@@ -46,6 +49,9 @@ impl Display for ServerError<String> {
             ServerError::ConstraintError => "constraint-error",
             ServerError::NoSessionFound => "no-session-found",
             ServerError::NoSessionReceived => "no-session-received",
+            ServerError::InvalidImage => "invalid-image",
+            ServerError::MissingFieldInForm => "missing-field-in-form",
+            ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::InternalError(error) => {
                 error!("Internal server error: {}", error);
                 "internal-error"
@@ -80,6 +86,9 @@ impl ServerError<String> {
             ServerError::ConstraintError => StatusCode::BAD_REQUEST,
             ServerError::NoSessionFound => StatusCode::BAD_REQUEST,
             ServerError::NoSessionReceived => StatusCode::OK,
+            ServerError::InvalidImage => StatusCode::BAD_REQUEST,
+            ServerError::MissingFieldInForm => StatusCode::BAD_REQUEST,
+            ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR
         };
         (
@@ -90,3 +99,5 @@ impl ServerError<String> {
         ).into_response()
     }
 }
+
+impl std::error::Error for ServerError<String> {}
