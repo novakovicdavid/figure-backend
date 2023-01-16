@@ -38,7 +38,7 @@ pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_st
 }
 
 async fn browse_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
-    let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &1).await;
+    let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &3).await;
     match figures {
         Ok(figures) => {
             json!({
