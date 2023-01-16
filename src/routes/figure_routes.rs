@@ -49,6 +49,25 @@ async fn browse_figures_with_parameters(State(server_state): State<Arc<ServerSta
     }
 }
 
+pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) -> Response {
+    let figures = server_state.database.get_figures(None, None, &9).await;
+    match figures {
+        Ok(figures) => {
+            json!({
+                "figures": figures
+            }).to_string().into_response()
+        }
+        Err(e) => e.into_response()
+    }
+}
+
+pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>>) -> Response {
+    match server_state.database.get_total_figures_count().await {
+        Ok(id) => id.to_string().into_response(),
+        Err(_) => ServerError::InternalError("Failed to get figure count".to_string()).into_response()
+    }
+}
+
 pub async fn upload_figure(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, multipart: Multipart) -> Response {
     let session = match &session.session {
         Some(s) => s,

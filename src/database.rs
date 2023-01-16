@@ -32,6 +32,8 @@ pub trait DatabaseFns: Sync + Send + Debug {
     async fn signup_user(&self, signup: SignUpForm) -> Result<(User, Profile), ServerError<String>>;
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
+    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
+    async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
     async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
     async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>>;
@@ -176,6 +178,42 @@ impl DatabaseFns for DatabaseImpl {
         match query {
             Ok(profile) => Ok(profile),
             Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>> {
+        let query =
+            sqlx::query(r#"
+            SELECT reltuples AS count FROM pg_class where relname = 'profiles';
+            "#)
+                .fetch_one(&self.db).await;
+        match query {
+            Ok(id) => {
+                match id.try_get::<f32, _>(0) {
+                    Ok(id) => Ok(id as IdType),
+                    Err(e) => Err(ServerError::InternalError(e.to_string()))
+                }
+            },
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>> {
+        let query =
+            sqlx::query(r#"
+            SELECT count(*) AS count FROM figures;
+            "#)
+                .fetch_one(&self.db).await;
+        match query {
+            Ok(id) => {
+                match id.try_get(0) {
+                    Ok(id) => {
+                        Ok(id)
+                    },
+                    Err(e) => Err(ServerError::InternalError(e.to_string()))
+                }
+            },
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
