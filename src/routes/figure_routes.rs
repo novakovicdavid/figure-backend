@@ -1,17 +1,18 @@
-use std::io::Cursor;
+use std::io::{BufWriter, Cursor};
 use std::sync::Arc;
 use anyhow::Context;
 use axum::Extension;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use bytes::Bytes;
-use image::GenericImageView;
+use bytes::{BufMut, Bytes};
+use image::{ColorType, GenericImageView, ImageBuffer};
 use serde_json::json;
 use uuid::Uuid;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::{ServerState, SessionOption};
+use crate::entities::dtos::figure_dto::FigureDTO;
 
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
     let figure = server_state.database.get_figure(&id).await;
@@ -22,22 +23,22 @@ pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): 
 }
 
 pub async fn browse_figures(State(server_state): State<Arc<ServerState>>) -> Response {
-    browse_figures_with_parameters(State(server_state), None, None).await
+    get_figures_with_parameters(State(server_state), None, None).await
 }
 
 pub async fn browse_figures_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path(starting_from_figure_id): Path<IdType>) -> Response {
-    browse_figures_with_parameters(State(server_state), Some(starting_from_figure_id), None).await
+    get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), None).await
 }
 
 pub async fn browse_figures_from_profile(State(server_state): State<Arc<ServerState>>, Path(profile_id): Path<IdType>) -> Response {
-    browse_figures_with_parameters(State(server_state), None, Some(profile_id)).await
+    get_figures_with_parameters(State(server_state), None, Some(profile_id)).await
 }
 
 pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path((profile_id, starting_from_figure_id)): Path<(IdType, IdType)>) -> Response {
-    browse_figures_with_parameters(State(server_state), Some(starting_from_figure_id), Some(profile_id)).await
+    get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), Some(profile_id)).await
 }
 
-async fn browse_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
+async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
     let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &3).await;
     match figures {
         Ok(figures) => {
@@ -87,10 +88,9 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
     if let Err(e) = server_state.storage.upload_object(uid.as_str(), image).await {
         return ServerError::InternalError(e.to_string()).into_response();
     }
+    let url = figure_url_from_name(server_state.storage.get_base_url(), uid);
 
-    let url = format!("{}/{}", server_state.storage.get_base_url(), uid);
-
-    match server_state.database.create_figure(title, description, width, height, url, session.profile_id).await {
+    match server_state.database.create_figure(title, description, width as i32, height as i32, url, session.profile_id).await {
         Ok(figure_id) => {
             json!({
                 "figure_id": figure_id
@@ -100,7 +100,11 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
     }
 }
 
-async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, Bytes, i32, i32), anyhow::Error> {
+fn figure_url_from_name(base_url: String, name: String) -> String {
+    format!("{}{}", base_url, name)
+}
+
+async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, Bytes, u32, u32), anyhow::Error> {
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;
     let mut image: Option<Bytes> = None;
@@ -135,13 +139,18 @@ async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, By
         }
     };
 
-    Ok((title, description, image, width, height))
+    // Convert to JPEG
+    let mut buffer = vec![];
+    let parsed_image = image::load_from_memory(&image)?;
+    parsed_image.write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Jpeg(90))?;
+
+    Ok((title, description, Bytes::from(buffer.to_vec()), width, height))
 }
 
-fn get_image_dimensions(image: &Bytes) -> Result<(i32, i32), anyhow::Error> {
+fn get_image_dimensions(image: &Bytes) -> Result<(u32, u32), anyhow::Error> {
     let (width, height) = image::load_from_memory(image)?.dimensions();
-    let width = width as i32;
-    let height = height as i32;
+    let width = width;
+    let height = height;
     Ok((width, height))
 }
 

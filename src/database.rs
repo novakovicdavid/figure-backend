@@ -284,8 +284,6 @@ impl DatabaseFns for DatabaseImpl {
         LIMIT {}
         "#, query, limit);
 
-        println!("{}", query);
-
         let result = sqlx::query_as::<_, FigureDTO>(&query).fetch_all(&self.db).await;
         match result {
             Ok(figures) => Ok(figures),

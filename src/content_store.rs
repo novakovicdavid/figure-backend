@@ -27,6 +27,7 @@ impl ContentStoreFns for S3Storage {
         self.client.put_object()
             .bucket(&self.bucket)
             .key(name)
+            .content_type("image/jpeg")
             .body(ByteStream::from(bytes))
             .send().await
             .map(|_| ())
@@ -39,22 +40,16 @@ impl ContentStoreFns for S3Storage {
 }
 
 impl S3Storage {
-    pub fn new_store() -> ContentStore {
-        let key_id = env::var("S3_APP_ID").expect("No S3_APP_ID env found");
-        let app_key = env::var("S3_APP_KEY").expect("No S3_APP_KEY env found");
-        let s3_region = env::var("S3_REGION").expect("No S3_REGION env found");
-        let bucket_endpoint = env::var("S3_ENDPOINT").expect("No S3_ENDPOINT env found");
-        let base_storage_url = env::var("S3_BASE_STORAGE_URL").expect("No S3_BASE_STORAGE_URL env found");
-        let bucket = env::var("S3_BUCKET").expect("No S3_BUCKET env found");
-
+    pub fn new_store(key_id: String, app_key: String, s3_region: String, bucket_endpoint: String, base_storage_url: String, bucket: String) -> ContentStore {
         let provider_name = "my-creds";
         let creds = Credentials::new(key_id, app_key, None, None, provider_name);
 
         let config = Config::builder()
             .region(Region::new(s3_region))
-            .endpoint_url(&bucket_endpoint)
+            .endpoint_url(bucket_endpoint)
             .credentials_provider(SharedCredentialsProvider::new(creds))
             .build();
+
         let client = Client::from_conf(config);
 
         Box::new(Self {

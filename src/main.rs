@@ -58,7 +58,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     env_logger::init();
 
     info!("Connecting to database...");
-    let database_url = env::var("DATABASE_URL")?;
+    let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     let database = get_database_connection(&database_url)
         .then(|database| async {
             info!("Connected to database...");
@@ -73,10 +73,16 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
             session_store
         });
 
-    let content_store = S3Storage::new_store();
+    let key_id = env::var("S3_APP_ID").expect("No S3_APP_ID env found");
+    let app_key = env::var("S3_APP_KEY").expect("No S3_APP_KEY env found");
+    let s3_region = env::var("S3_REGION").expect("No S3_REGION env found");
+    let bucket_endpoint = env::var("S3_ENDPOINT").expect("No S3_ENDPOINT env found");
+    let base_storage_url = env::var("S3_BASE_STORAGE_URL").expect("No S3_BASE_STORAGE_URL env found");
+    let bucket = env::var("S3_BUCKET").expect("No S3_BUCKET env found");
+    let content_store = S3Storage::new_store(key_id, app_key, s3_region, bucket_endpoint, base_storage_url, bucket);
 
     info!("Setting up CORS...");
-    let origin = env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let origin = env::var("ORIGIN").expect("No ORIGIN env found");
     let cors = create_app_cors([origin.parse()?]);
     info!("Allowed origin (CORS): {}", origin);
 
@@ -96,8 +102,8 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let app = create_app(server_state, cors, authentication_extension);
 
     info!("Starting Axum...");
-    let server_port = env::var("SERVER_PORT").unwrap_or_else(|_| "8000".to_string()).parse::<i32>()?;
-    let addr = SocketAddr::from(([127, 0, 0, 1], env::var("SERVER_PORT").unwrap_or_else(|_| "8000".to_string()).parse()?));
+    let server_port = env::var("SERVER_PORT").unwrap_or_else(|_| "8000".to_string()).parse::<u16>()?;
+    let addr = SocketAddr::from(([127, 0, 0, 1], server_port));
     let axum_server = axum::Server::bind(&addr)
         .serve(app.into_make_service());
     info!("Server is up at port {}", server_port);
