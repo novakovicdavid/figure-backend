@@ -30,7 +30,7 @@ use crate::entities::types::IdType;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::routes::misc_routes::healthcheck;
-use crate::routes::profile_routes::{get_profile, get_total_profiles_count};
+use crate::routes::profile_routes::{get_profile, get_total_profiles_count, update_profile};
 use crate::session_store::{SessionStore, SessionStoreConnection};
 
 pub struct ServerState {
@@ -114,6 +114,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
 fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
     Router::new()
+        .route("/profile/update", post(update_profile))
         .route("/figures/upload", post(upload_figure))
         // Disable the default limit
         .layer(DefaultBodyLimit::disable())

@@ -71,8 +71,10 @@ impl ServerError<String> {
         }
         ServerError::InternalError(error.to_string())
     }
+}
 
-    pub fn into_response(self) -> Response<BoxBody> {
+impl IntoResponse for ServerError<String> {
+    fn into_response(self) -> axum::response::Response {
         let status_code = match self {
             ServerError::InvalidEmail => StatusCode::BAD_REQUEST,
             ServerError::InvalidUsername => StatusCode::BAD_REQUEST,

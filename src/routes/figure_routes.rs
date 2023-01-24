@@ -161,7 +161,7 @@ fn get_image_dimensions(image: &Bytes) -> Result<(u32, u32), anyhow::Error> {
     Ok((width, height))
 }
 
-fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {
+pub fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {
     Ok(image::io::Reader::new(Cursor::new(data))
         .with_guessed_format()?
         .format().context("No format found for image")?

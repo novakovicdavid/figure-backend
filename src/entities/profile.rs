@@ -9,8 +9,9 @@ pub struct Profile {
     pub id: IdType,
     pub username: String,
     pub display_name: Option<String>,
-    pub profile_picture: Option<String>,
     pub bio: Option<String>,
+    pub banner: Option<String>,
+    pub profile_picture: Option<String>,
     pub user_id: IdType,
 }
 
@@ -23,6 +24,7 @@ impl FromRow<'_, PgRow> for Profile {
         let user_id: IdType = row.try_get("user_id")?;
         let profile_picture: Option<String> = row.try_get("profile_picture")?;
         let bio: Option<String> = row.try_get("bio")?;
+        let banner: Option<String> = row.try_get("banner")?;
 
         Ok(Profile {
             id,
@@ -31,21 +33,7 @@ impl FromRow<'_, PgRow> for Profile {
             profile_picture,
             bio,
             user_id,
+            banner,
         })
-    }
-}
-
-pub enum ProfileDef {
-    Table,
-    Id
-}
-
-impl Display for ProfileDef {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let message = match self {
-            ProfileDef::Table => "profiles",
-            ProfileDef::Id => "id"
-        };
-        write!(f, "{}", message)
     }
 }

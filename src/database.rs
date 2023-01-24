@@ -31,6 +31,7 @@ pub trait DatabaseFns: Sync + Send + Debug {
     async fn signup_user(&self, signup: SignUpForm) -> Result<(User, Profile), ServerError<String>>;
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
+    async fn update_profile_by_id(&self, profile_id: IdType, display_name: String, bio: String, banner: Option<String>, profile_picture: Option<String>) -> Result<(), String>;
     async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
@@ -124,8 +125,9 @@ impl DatabaseFns for DatabaseImpl {
                     id: profile_id,
                     username: signup.username,
                     display_name: None,
-                    profile_picture: None,
                     bio: None,
+                    banner: None,
+                    profile_picture: None,
                     user_id,
                 }
             )),
@@ -172,13 +174,32 @@ impl DatabaseFns for DatabaseImpl {
 
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>> {
         let query =
-            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, profiles.profile_picture, profiles.bio, user_id FROM profiles WHERE user_id = $1"))
+            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, bio, banner, profile_picture, user_id FROM profiles WHERE user_id = $1"))
                 .bind(id)
                 .fetch_one(&self.db).await;
         match query {
             Ok(profile) => Ok(profile),
             Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
             Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn update_profile_by_id(&self, profile_id: IdType, display_name: String, bio: String, banner: Option<String>, profile_picture: Option<String>) -> Result<(), String> {
+        let query =
+            sqlx::query(r#"
+            UPDATE profiles
+            SET display_name = $1, bio = $2, banner = COALESCE($3, banner), profile_picture = COALESCE($4, profile_picture)
+            WHERE profiles.id = $5
+            "#)
+                .bind(display_name)
+                .bind(bio)
+                .bind(banner)
+                .bind(profile_picture)
+                .bind(profile_id)
+                .execute(&self.db).await;
+        match query {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e.to_string())
         }
     }
 
@@ -194,7 +215,7 @@ impl DatabaseFns for DatabaseImpl {
                     Ok(id) => Ok(id as IdType),
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
-            },
+            }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
@@ -210,10 +231,10 @@ impl DatabaseFns for DatabaseImpl {
                 match id.try_get(0) {
                     Ok(id) => {
                         Ok(id)
-                    },
+                    }
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
-            },
+            }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
@@ -222,7 +243,7 @@ impl DatabaseFns for DatabaseImpl {
         let query =
             sqlx::query(r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
-            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
             from figures
             INNER JOIN profiles
             ON figures.profile_id = profiles.id
@@ -233,7 +254,7 @@ impl DatabaseFns for DatabaseImpl {
         let row = match query {
             Ok(row) => {
                 row
-            },
+            }
             Err(Error::RowNotFound) => return Err(ServerError::ResourceNotFound),
             Err(e) => return Err(ServerError::InternalError(e.to_string()))
         };
@@ -252,7 +273,7 @@ impl DatabaseFns for DatabaseImpl {
     async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>> {
         let mut query = r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
-            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
             from figures
             INNER JOIN profiles
             ON figures.profile_id = profiles.id
@@ -269,8 +290,7 @@ impl DatabaseFns for DatabaseImpl {
             let mut filter = "figures.profile_id = ".to_string();
             if starting_from_id.is_some() {
                 filter = format!("AND {}", filter);
-            }
-            else {
+            } else {
                 filter = format!("WHERE {}", filter);
             }
             query = format!(r#"
@@ -313,7 +333,7 @@ impl DatabaseFns for DatabaseImpl {
                     Ok(id) => Ok(id),
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
-            },
+            }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
@@ -333,7 +353,7 @@ impl DatabaseFns for DatabaseImpl {
                     Ok(id) => Ok(id),
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
-            },
+            }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }

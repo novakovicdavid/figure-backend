@@ -15,8 +15,9 @@ pub struct ProfileWithoutUserIdDTO {
     pub id: IdType,
     pub username: String,
     pub display_name: Option<String>,
-    pub profile_picture: Option<String>,
     pub bio: Option<String>,
+    pub banner: Option<String>,
+    pub profile_picture: Option<String>,
 }
 
 impl ProfileDTO {
@@ -53,8 +54,10 @@ impl From<Profile> for ProfileWithoutUserIdDTO {
             id: profile.id,
             username: profile.username,
             display_name: profile.display_name,
-            profile_picture: profile.profile_picture,
             bio: profile.bio,
+            banner: profile.banner,
+            profile_picture: profile.profile_picture,
+
         }
     }
 }
