@@ -206,13 +206,15 @@ impl DatabaseFns for DatabaseImpl {
     async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>> {
         let query =
             sqlx::query(r#"
-            SELECT reltuples AS count FROM pg_class where relname = 'profiles';
+            SELECT count(*) AS count FROM profiles;
             "#)
                 .fetch_one(&self.db).await;
         match query {
-            Ok(id) => {
-                match id.try_get::<f32, _>(0) {
-                    Ok(id) => Ok(id as IdType),
+            Ok(count) => {
+                match count.try_get(0) {
+                    Ok(count) => {
+                        Ok(count)
+                    }
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
             }
@@ -227,10 +229,10 @@ impl DatabaseFns for DatabaseImpl {
             "#)
                 .fetch_one(&self.db).await;
         match query {
-            Ok(id) => {
-                match id.try_get(0) {
-                    Ok(id) => {
-                        Ok(id)
+            Ok(count) => {
+                match count.try_get(0) {
+                    Ok(count) => {
+                        Ok(count)
                     }
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
