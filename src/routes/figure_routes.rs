@@ -100,6 +100,13 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
     }
 }
 
+pub async fn get_total_figures_by_profile(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
+    match server_state.database.get_total_figures_by_profile(id).await {
+        Ok(total) => total.to_string().into_response(),
+        Err(_) => ServerError::InternalError(format!("Could not get total figures for {}", id)).into_response()
+    }
+}
+
 fn figure_url_from_name(base_url: String, name: String) -> String {
     format!("{}{}", base_url, name)
 }

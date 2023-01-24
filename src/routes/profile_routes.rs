@@ -2,7 +2,7 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
 use serde_json::json;
-use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::profile_dto::ProfileWithoutUserIdDTO;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::ServerState;
@@ -12,7 +12,7 @@ pub async fn get_profile(State(server_state): State<Arc<ServerState>>, Path(prof
     match profile {
         Ok(profile) => {
             json!({
-                "profile": ProfileDTO::from(profile)
+                "profile": ProfileWithoutUserIdDTO::from(profile)
             }).to_string().into_response()
         },
         Err(e) => e.into_response()

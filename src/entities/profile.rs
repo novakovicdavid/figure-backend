@@ -9,6 +9,8 @@ pub struct Profile {
     pub id: IdType,
     pub username: String,
     pub display_name: Option<String>,
+    pub profile_picture: Option<String>,
+    pub bio: Option<String>,
     pub user_id: IdType,
 }
 
@@ -19,11 +21,15 @@ impl FromRow<'_, PgRow> for Profile {
         let username: String = row.try_get("username")?;
         let display_name: Option<String> = row.try_get("display_name")?;
         let user_id: IdType = row.try_get("user_id")?;
-        
+        let profile_picture: Option<String> = row.try_get("profile_picture")?;
+        let bio: Option<String> = row.try_get("bio")?;
+
         Ok(Profile {
             id,
             username,
             display_name,
+            profile_picture,
+            bio,
             user_id,
         })
     }

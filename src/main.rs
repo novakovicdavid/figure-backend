@@ -28,7 +28,7 @@ use crate::auth_layer::authenticate;
 use crate::content_store::{ContentStore, S3Storage};
 use crate::entities::types::IdType;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
-use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_count, landing_page_figures, upload_figure};
+use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::routes::misc_routes::healthcheck;
 use crate::routes::profile_routes::{get_profile, get_total_profiles_count};
 use crate::session_store::{SessionStore, SessionStoreConnection};
@@ -130,6 +130,7 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .route("/figures/landing-page", get(landing_page_figures))
         .route("/figures/browse/:starting_from_figure_id", get(browse_figures_starting_from_figure_id))
         .route("/profile/:profile_id/browse", get(browse_figures_from_profile))
+        .route("/profile/:profile_id/total_figures", get(get_total_figures_by_profile))
         .route("/profile/:profile_id/browse/:starting_from_figure_id", get(browse_figures_from_profile_starting_from_figure_id))
         .route("/profiles/:id", get(get_profile))
         .route("/profiles/count", get(get_total_profiles_count))

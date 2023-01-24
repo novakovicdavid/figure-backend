@@ -1,15 +1,15 @@
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
-use crate::entities::figure::{Figure};
+use crate::entities::figure::Figure;
 use crate::entities::user::{User, UserAndProfileFromQuery};
-use serde::{Deserialize};
+use serde::Deserialize;
 use sqlx::{Error, FromRow, PgPool, Pool, Postgres, Row};
 use zeroize::Zeroize;
 use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
-use crate::entities::profile::{Profile, ProfileDef};
+use crate::entities::profile::Profile;
 use crate::server_errors::ServerError;
 use crate::entities::types::IdType;
 
@@ -36,6 +36,7 @@ pub trait DatabaseFns: Sync + Send + Debug {
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
     async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
     async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>>;
+    async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError<String>>;
 }
 
 pub type Database = Box<dyn DatabaseFns>;
@@ -123,6 +124,8 @@ impl DatabaseFns for DatabaseImpl {
                     id: profile_id,
                     username: signup.username,
                     display_name: None,
+                    profile_picture: None,
+                    bio: None,
                     user_id,
                 }
             )),
@@ -133,7 +136,7 @@ impl DatabaseFns for DatabaseImpl {
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
         let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
         SELECT users.id AS user_id, users.email, users.password, users.role,
-        profiles.id AS profile_id, profiles.username, profiles.display_name
+        profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
         FROM users
         INNER JOIN profiles
         ON users.id = profiles.user_id
@@ -160,9 +163,7 @@ impl DatabaseFns for DatabaseImpl {
 
         let password_verification = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
         if password_verification.is_ok() {
-            Ok((
-                user.into(), profile.into()
-            ))
+            Ok((user, profile))
         } else {
             Err(ServerError::WrongPassword)
         }
@@ -171,7 +172,7 @@ impl DatabaseFns for DatabaseImpl {
 
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>> {
         let query =
-            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, user_id from {} where {} = $1", ProfileDef::Table, ProfileDef::Id))
+            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, profiles.profile_picture, profiles.bio, user_id FROM profiles WHERE user_id = $1"))
                 .bind(id)
                 .fetch_one(&self.db).await;
         match query {
@@ -221,7 +222,7 @@ impl DatabaseFns for DatabaseImpl {
         let query =
             sqlx::query(r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
-            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.user_id
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
             from figures
             INNER JOIN profiles
             ON figures.profile_id = profiles.id
@@ -251,7 +252,7 @@ impl DatabaseFns for DatabaseImpl {
     async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>> {
         let mut query = r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
-            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.user_id
+            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
             from figures
             INNER JOIN profiles
             ON figures.profile_id = profiles.id
@@ -309,6 +310,26 @@ impl DatabaseFns for DatabaseImpl {
         match result {
             Ok(id) => {
                 match id.try_get(0) {
+                    Ok(id) => Ok(id),
+                    Err(e) => Err(ServerError::InternalError(e.to_string()))
+                }
+            },
+            Err(e) => Err(ServerError::InternalError(e.to_string()))
+        }
+    }
+
+    async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError<String>> {
+        let result =
+            sqlx::query(r#"
+            SELECT COUNT(*)
+            FROM figures
+            WHERE profile_id = $1
+            "#)
+                .bind(profile_id)
+                .fetch_one(&self.db).await;
+        match result {
+            Ok(total) => {
+                match total.try_get(0) {
                     Ok(id) => Ok(id),
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
