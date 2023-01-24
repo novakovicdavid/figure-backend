@@ -1,4 +1,4 @@
-Environment variables:
+### Environment variables:
 
 DATABASE_URL: Postgres URL (postgres://..)
 
@@ -18,10 +18,10 @@ S3_ENDPOINT: endpoint of S3 bucket (https://s3...)
 
 S3_REGION: region of S3 endpoint (eu-central-003)
 
-S3_BASE_STORAGE_URL: base url of S3 objects (https://... without slash at the end)
+S3_BASE_STORAGE_URL: base url of S3 objects (https://.../ with slash at the end)
 
 ***
 
 ### License
 
-Copyright © 2023, David Novakovic. Released under the AGPL-3.0 License.
+Copyright © 2023 David Novakovic. Released under the AGPL-3.0 License.
