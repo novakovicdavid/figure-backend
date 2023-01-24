@@ -138,7 +138,7 @@ impl DatabaseFns for DatabaseImpl {
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
         let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
         SELECT users.id AS user_id, users.email, users.password, users.role,
-        profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.profile_picture, profiles.bio, profiles.user_id
+        profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
         FROM users
         INNER JOIN profiles
         ON users.id = profiles.user_id
