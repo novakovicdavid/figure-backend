@@ -6,6 +6,7 @@ mod server_errors;
 mod routes;
 mod tests;
 mod content_store;
+mod push_notification;
 
 use std::env;
 use std::net::SocketAddr;
@@ -18,7 +19,7 @@ use axum::http::Method;
 use axum::routing::get;
 use axum::routing::post;
 use futures::FutureExt;
-use log::info;
+use log::{info, warn};
 use crate::database::{Database, get_database_connection};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
@@ -27,6 +28,7 @@ use url::Url;
 use crate::auth_layer::authenticate;
 use crate::content_store::{ContentStore, S3Storage};
 use crate::entities::types::IdType;
+use crate::push_notification::create_push_notification_service;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::routes::misc_routes::healthcheck;
@@ -57,9 +59,21 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let time_to_start = Instant::now();
     env_logger::init();
 
+    // Push notification service
+    let mut push_notification_service = None;
+    if let Ok(onesignal_appid) = env::var("ONESIGNAL_APPID") {
+        info!("Setting up push notification service...");
+        let onesignal_appkey_token = env::var("ONESIGNAL_APPKEY_TOKEN").expect("");
+        let onesignal_userkey_token = env::var("ONESIGNAL_USERKEY_TOKEN").expect("");
+        push_notification_service = Some(create_push_notification_service(onesignal_appid, onesignal_appkey_token, onesignal_userkey_token));
+    }
+    else {
+        info!("Skipping push notification setup.")
+    }
+
     info!("Connecting to database...");
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
-    let database = get_database_connection(&database_url)
+    let database = get_database_connection(&database_url, push_notification_service)
         .then(|database| async {
             info!("Connected to database...");
             database
@@ -82,9 +96,15 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let content_store = S3Storage::new_store(key_id, app_key, s3_region, bucket_endpoint, base_storage_url, bucket);
 
     info!("Setting up CORS...");
-    let origin = env::var("ORIGIN").expect("No ORIGIN env found");
-    let cors = create_app_cors([origin.parse()?]);
-    info!("Allowed origin (CORS): {}", origin);
+    let origin = env::var("ORIGIN").ok();
+    let mut cors = None;
+    if let Some(origin) = origin {
+        cors = Some(create_app_cors([origin.parse()?]));
+        info!("Allowed origin (CORS): {}", origin);
+    }
+    else {
+        warn!("No ORIGIN env found. Do not run in production.")
+    }
 
     // Struct containing optional user session from a request
     let authentication_extension = create_authentication_extension();
@@ -112,8 +132,8 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
-    Router::new()
+fn create_app(server_state: Arc<ServerState>, cors: Option<CorsLayer>, authentication_extension: SessionOption) -> Router {
+    let router = Router::new()
         .route("/profile/update", post(update_profile))
         .route("/figures/upload", post(upload_figure))
         // Disable the default limit
@@ -139,9 +159,14 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
 
         .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
         .layer(Extension(authentication_extension))
-        .layer(CookieManagerLayer::new())
-        .layer(cors)
-        .with_state(server_state)
+        .layer(CookieManagerLayer::new());
+
+    if let Some(cors) = cors {
+        let router = router.layer(cors);
+        return router.with_state(server_state);
+    }
+
+    router.with_state(server_state)
 }
 
 fn create_server_state(database: Database, session_store: SessionStore, storage: ContentStore, domain: String) -> Arc<ServerState> {
