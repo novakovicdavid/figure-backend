@@ -20,6 +20,18 @@ S3_REGION: region of S3 endpoint (eu-central-003)
 
 S3_BASE_STORAGE_URL: base url of S3 objects (https://.../ with slash at the end)
 
+**Optional:**
+
+If desired, include these 3 environment variables to enable push notifications:
+
+Get these values at [onesignal.com](https://onesignal.com)
+
+ONESIGNAL_APPID: OneSignal AppId token
+
+ONESIGNAL_APPKEY_TOKEN: OneSignal AppKey token
+
+ONESIGNAL_USERKEY_TOKEN: OneSignal UserKey token
+
 ***
 
 ### License
