@@ -123,7 +123,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
     info!("Starting Axum...");
     let server_port = env::var("SERVER_PORT").unwrap_or_else(|_| "8000".to_string()).parse::<u16>()?;
-    let addr = SocketAddr::from(([127, 0, 0, 1], server_port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], server_port));
     let axum_server = axum::Server::bind(&addr)
         .serve(app.into_make_service());
     info!("Server is up at port {}", server_port);
