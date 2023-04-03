@@ -12,7 +12,6 @@ use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::profile::Profile;
 use crate::server_errors::ServerError;
 use crate::entities::types::IdType;
-use crate::push_notification::PushNotificationService;
 
 #[derive(Deserialize)]
 pub struct SignUpForm {
@@ -46,7 +45,6 @@ pub type Database = Box<dyn DatabaseFns>;
 #[derive(Debug)]
 struct DatabaseImpl {
     db: Pool<Postgres>,
-    push_service: Option<PushNotificationService>
 }
 
 #[async_trait]
@@ -334,12 +332,7 @@ impl DatabaseFns for DatabaseImpl {
         match result {
             Ok(id) => {
                 match id.try_get(0) {
-                    Ok(id) => {
-                        if let Some(push) = &self.push_service {
-                            push.push_message().await;
-                        }
-                        Ok(id)
-                    },
+                    Ok(id) => Ok(id),
                     Err(e) => Err(ServerError::InternalError(e.to_string()))
                 }
             }
@@ -368,10 +361,9 @@ impl DatabaseFns for DatabaseImpl {
     }
 }
 
-pub async fn get_database_connection(database_url: &str, push_notification_service: Option<PushNotificationService>) -> Database {
+pub async fn get_database_connection(database_url: &str) -> Database {
     let db = PgPool::connect(database_url).await.unwrap();
     Box::new(DatabaseImpl {
-        db,
-        push_service: push_notification_service,
+        db
     })
 }

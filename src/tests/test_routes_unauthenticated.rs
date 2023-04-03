@@ -8,7 +8,7 @@ use crate::*;
 use crate::server_errors::ServerError;
 
 pub async fn setup() -> Result<Router, Error> {
-    let database = get_database_connection("postgres://postgres:mysecretpassword@localhost/postgres", ).await;
+    let database = get_database_connection("postgres://postgres:mysecretpassword@localhost/postgres").await;
     let session_store = SessionStoreConnection::new("redis://localhost:6379").await;
     let key_id = env::var("S3_APP_ID").expect("No S3_APP_ID env found");
     let app_key = env::var("S3_APP_KEY").expect("No S3_APP_KEY env found");
