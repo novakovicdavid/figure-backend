@@ -43,20 +43,21 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 }
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    return match server_state.database.signup_user(signup).await {
-        Ok((user, profile)) => {
-            let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
-            let mut cookie = Cookie::new("session_id", session.id);
-            cookie.set_http_only(true);
-            cookie.set_secure(true);
-            cookie.set_same_site(SameSite::Strict);
-            cookie.set_domain(server_state.domain.to_string());
-            cookie.set_path("/");
-            cookies.add(cookie);
-            ProfileDTO::from(profile).to_json().into_response()
-        }
-        Err(e) => e.into_response()
-    }
+    // return match server_state.database.signup_user(signup).await {
+    //     Ok((user, profile)) => {
+    //         let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
+    //         let mut cookie = Cookie::new("session_id", session.id);
+    //         cookie.set_http_only(true);
+    //         cookie.set_secure(true);
+    //         cookie.set_same_site(SameSite::Strict);
+    //         cookie.set_domain(server_state.domain.to_string());
+    //         cookie.set_path("/");
+    //         cookies.add(cookie);
+    //         ProfileDTO::from(profile).to_json().into_response()
+    //     }
+    //     Err(e) => e.into_response()
+    // }
+    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
 }
 
 pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {

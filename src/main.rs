@@ -6,6 +6,8 @@ mod server_errors;
 mod routes;
 mod tests;
 mod content_store;
+mod services;
+mod repositories;
 
 use std::env;
 use std::net::SocketAddr;
@@ -96,7 +98,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     info!("Waiting for stores...");
     let database = database.await;
     let session_store = session_store.await;
-    let server_state = create_server_state(database, session_store, content_store, domain);
+    let server_state = create_server_state(Box::new(database), session_store, content_store, domain);
 
     info!("Setting up routes and layers...");
     let app = create_app(server_state, cors, authentication_extension);

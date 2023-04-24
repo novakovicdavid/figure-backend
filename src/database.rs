@@ -5,8 +5,6 @@ use crate::entities::figure::Figure;
 use crate::entities::user::{User, UserAndProfileFromQuery};
 use serde::Deserialize;
 use sqlx::{Error, FromRow, PgPool, Pool, Postgres, Row};
-use zeroize::Zeroize;
-use crate::auth_layer::{hash_password, is_email_valid, is_username_valid};
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::profile::Profile;
@@ -28,7 +26,6 @@ pub struct SignInForm {
 
 #[async_trait]
 pub trait DatabaseFns: Sync + Send + Debug {
-    async fn signup_user(&self, signup: SignUpForm) -> Result<(User, Profile), ServerError<String>>;
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
     async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
     async fn update_profile_by_id(&self, profile_id: IdType, display_name: String, bio: String, banner: Option<String>, profile_picture: Option<String>) -> Result<(), String>;
@@ -49,92 +46,6 @@ struct DatabaseImpl {
 
 #[async_trait]
 impl DatabaseFns for DatabaseImpl {
-    async fn signup_user(&self, mut signup: SignUpForm) -> Result<(User, Profile), ServerError<String>> {
-        if !is_email_valid(&signup.email) {
-            return Err(ServerError::InvalidEmail);
-        }
-        if !is_username_valid(&signup.username) {
-            return Err(ServerError::InvalidUsername);
-        }
-        let password_hash_result = hash_password(&signup.password, true);
-        signup.password.zeroize();
-        let password_hash = match password_hash_result {
-            Ok(hash) => hash,
-            Err(e) => return Err(e)
-        };
-
-        let transaction_result = self.db.begin().await;
-        let mut transaction = match transaction_result {
-            Ok(transaction) => transaction,
-            Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
-            }
-        };
-
-        // Create a user
-        let user_id_result = sqlx::query(r#"
-            INSERT INTO users (email, password, role)
-            VALUES ($1, $2, 'user')
-            RETURNING id"#)
-            .bind(&signup.email.to_lowercase())
-            .bind(password_hash)
-            .fetch_one(&mut transaction).await;
-
-        let user_id = match user_id_result {
-            Ok(user_id) => user_id.get(0),
-            Err(e) => {
-                return match ServerError::parse_db_error(&e) {
-                    ServerError::ConstraintError => {
-                        Err(ServerError::EmailAlreadyInUse)
-                    }
-                    _ => Err(ServerError::InternalError(e.to_string()))
-                };
-            }
-        };
-
-        // Create a profile
-        let profile_id_result = sqlx::query(r#"
-            INSERT INTO profiles (username, user_id)
-            VALUES ($1, $2)
-            RETURNING id"#)
-            .bind(&signup.username)
-            .bind(user_id)
-            .fetch_one(&mut transaction).await;
-
-        let profile_id = match profile_id_result {
-            Ok(profile_id) => profile_id.get(0),
-            Err(e) => {
-                return match ServerError::parse_db_error(&e) {
-                    ServerError::ConstraintError => {
-                        Err(ServerError::UsernameAlreadyTaken)
-                    }
-                    _ => Err(ServerError::InternalError(e.to_string()))
-                };
-            }
-        };
-
-        match transaction.commit().await {
-            Ok(()) => Ok((
-                User {
-                    email: signup.email,
-                    password: "".to_string(),
-                    role: "user".to_string(),
-                    id: user_id,
-                },
-                Profile {
-                    id: profile_id,
-                    username: signup.username,
-                    display_name: None,
-                    bio: None,
-                    banner: None,
-                    profile_picture: None,
-                    user_id,
-                }
-            )),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
-    }
-
     async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
         let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
         SELECT users.id AS user_id, users.email, users.password, users.role,
@@ -361,9 +272,9 @@ impl DatabaseFns for DatabaseImpl {
     }
 }
 
-pub async fn get_database_connection(database_url: &str) -> Database {
+pub async fn get_database_connection(database_url: &str) -> impl DatabaseFns {
     let db = PgPool::connect(database_url).await.unwrap();
-    Box::new(DatabaseImpl {
+    DatabaseImpl {
         db
-    })
+    }
 }
