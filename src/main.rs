@@ -1,11 +1,16 @@
-mod database;
-mod session_store;
+// #![feature(async_fn_in_trait)]
+// #![feature(closure_lifetime_binder)]
+
 mod auth_layer;
 mod entities;
 mod server_errors;
 mod routes;
 mod tests;
 mod content_store;
+mod services;
+mod repositories;
+mod context;
+mod database;
 
 use std::env;
 use std::net::SocketAddr;
@@ -19,28 +24,54 @@ use axum::routing::get;
 use axum::routing::post;
 use futures::FutureExt;
 use log::info;
-use crate::database::{Database, get_database_connection};
+use redis::aio::ConnectionManager;
+use sqlx::{Pool, Postgres};
+use tokio::task;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use url::Url;
 use crate::auth_layer::authenticate;
-use crate::content_store::{ContentStore, S3Storage};
+use crate::content_store::S3Storage;
+use crate::context::{Context, RepositoryContext, ServiceContext};
 use crate::entities::types::IdType;
+use crate::repositories::figure_repository::FigureRepository;
+use crate::repositories::profile_repository::ProfileRepository;
+use crate::repositories::session_repository::SessionRepository;
+use crate::repositories::transaction::{PostgresTransaction, PostgresTransactionCreator};
+use crate::repositories::user_repository::UserRepository;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::routes::misc_routes::healthcheck;
 use crate::routes::profile_routes::{get_profile, get_total_profiles_count, update_profile};
-use crate::session_store::{SessionStore, SessionStoreConnection};
+use crate::services::figure_service::FigureService;
+use crate::services::profile_service::ProfileService;
+use crate::services::user_service::UserService;
+
+type ServiceContextType = ServiceContext<
+    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository, SessionRepository>,
+    ProfileService<PostgresTransaction, ProfileRepository, S3Storage>,
+    FigureService<PostgresTransaction, FigureRepository, S3Storage>
+>;
+
+type RepositoryContextType = RepositoryContext<
+    UserRepository,
+    ProfileRepository,
+    FigureRepository,
+    SessionRepository,
+    PostgresTransactionCreator,
+>;
+
+type ContextType = Context<
+    ServiceContextType,
+    RepositoryContextType>;
 
 pub struct ServerState {
-    database: Database,
-    session_store: SessionStore,
-    storage: ContentStore,
+    context: ContextType,
     domain: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Session {
     id: String,
     _user_id: IdType,
@@ -57,21 +88,25 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let time_to_start = Instant::now();
     env_logger::init();
 
-    info!("Connecting to database...");
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
-    let database = get_database_connection(&database_url)
-        .then(|database| async {
-            info!("Connected to database...");
-            database
+    info!("Connecting to database...");
+    let db_pool_future = Pool::<Postgres>::connect(database_url.as_str())
+        .then(|result| async {
+            result.map(|pool| {
+                info!("Connected to database...");
+                pool
+            })
         });
 
+
+    let session_store_url = env::var("REDIS_URL").expect("No REDIS_URL env found");
     info!("Connecting to session store...");
-    let session_store_url = env::var("REDIS_URL")?;
-    let session_store = SessionStoreConnection::new(&session_store_url)
+    let client = redis::Client::open(session_store_url)?;
+    let session_store_connection_future = task::spawn(ConnectionManager::new(client)
         .then(|session_store| async {
             info!("Connected to session store...");
             session_store
-        });
+        }));
 
     let key_id = env::var("S3_APP_ID").expect("No S3_APP_ID env found");
     let app_key = env::var("S3_APP_KEY").expect("No S3_APP_KEY env found");
@@ -94,9 +129,9 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     info!("Domain parsed from origin: {}", domain);
 
     info!("Waiting for stores...");
-    let database = database.await;
-    let session_store = session_store.await;
-    let server_state = create_server_state(database, session_store, content_store, domain);
+    let db_pool = db_pool_future.await?;
+    let session_store = session_store_connection_future.await??;
+    let server_state = create_state(db_pool, session_store, content_store, domain);
 
     info!("Setting up routes and layers...");
     let app = create_app(server_state, cors, authentication_extension);
@@ -144,13 +179,24 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .with_state(server_state)
 }
 
-fn create_server_state(database: Database, session_store: SessionStore, storage: ContentStore, domain: String) -> Arc<ServerState> {
+fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState> {
+    let user_repository = UserRepository::new(db_pool.clone());
+    let profile_repository = ProfileRepository::new(db_pool.clone());
+    let figure_repository = FigureRepository::new(db_pool.clone());
+    let session_repository = SessionRepository::new(session_store);
+    let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
+    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone(), session_repository.clone());
+    let profile_service = ProfileService::new(profile_repository.clone(), content_store.clone());
+    let figure_service = FigureService::new(figure_repository.clone(), content_store);
+    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);
+    let service_context = ServiceContext::new(user_service, profile_service, figure_service);
+    let context = Context::new(service_context, repository_context);
+
     Arc::new(ServerState {
-        database,
-        session_store,
-        storage,
+        context,
         domain,
     })
+
 }
 
 fn create_authentication_extension() -> SessionOption {

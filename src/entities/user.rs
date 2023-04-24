@@ -2,7 +2,7 @@ use serde::{Serialize};
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 
-#[derive(Serialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Debug, Clone, PartialEq, sqlx::FromRow)]
 pub struct User {
     #[sqlx(rename = "user_id")]
     pub id: IdType,

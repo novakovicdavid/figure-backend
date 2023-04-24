@@ -1,21 +1,20 @@
-use std::io::{BufWriter, Cursor};
+use std::io::Cursor;
 use std::sync::Arc;
 use anyhow::Context;
 use axum::Extension;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use bytes::{BufMut, Bytes};
-use image::{ColorType, GenericImageView, ImageBuffer};
+use bytes::Bytes;
+use image::GenericImageView;
 use serde_json::json;
-use uuid::Uuid;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::{ServerState, SessionOption};
-use crate::entities::dtos::figure_dto::FigureDTO;
+use crate::services::figure_service::FigureServiceTrait;
 
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
-    let figure = server_state.database.get_figure(&id).await;
+    let figure = server_state.context.service_context.figure_service.find_figure_by_id(id).await;
     match figure {
         Ok(figure) => figure.to_json_string().into_response(),
         Err(e) => e.into_response()
@@ -39,7 +38,7 @@ pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_st
 }
 
 async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
-    let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &3).await;
+    let figures = server_state.context.service_context.figure_service.find_figures_starting_from_id_with_profile_id(starting_from_figure_id, profile_id, 3).await;
     match figures {
         Ok(figures) => {
             json!({
@@ -51,7 +50,7 @@ async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>
 }
 
 pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) -> Response {
-    let figures = server_state.database.get_figures(None, None, &9).await;
+    let figures = server_state.context.service_context.figure_service.find_figures_starting_from_id_with_profile_id(None, None, 9).await;
     match figures {
         Ok(figures) => {
             json!({
@@ -63,7 +62,7 @@ pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) 
 }
 
 pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>>) -> Response {
-    match server_state.database.get_total_figures_count().await {
+    match server_state.context.service_context.figure_service.get_total_figures_count().await {
         Ok(id) => id.to_string().into_response(),
         Err(_) => ServerError::InternalError("Failed to get figure count".to_string()).into_response()
     }
@@ -83,17 +82,10 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
         }
     };
 
-    let uid = Uuid::new_v4();
-    let uid = uid.to_string();
-    if let Err(e) = server_state.storage.upload_object(uid.as_str(), image).await {
-        return ServerError::InternalError(e.to_string()).into_response();
-    }
-    let url = figure_url_from_name(server_state.storage.get_base_url(), uid);
-
-    match server_state.database.create_figure(title, description, width as i32, height as i32, url, session.profile_id).await {
-        Ok(figure_id) => {
+    match server_state.context.service_context.figure_service.create(title, description, image, width, height, session.profile_id).await {
+        Ok(figure) => {
             json!({
-                "figure_id": figure_id
+                "figure_id": figure.id
             }).to_string().into_response()
         }
         Err(_) => ServerError::InternalError("Could not create Figure".to_string()).into_response()
@@ -101,17 +93,17 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
 }
 
 pub async fn get_total_figures_by_profile(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
-    match server_state.database.get_total_figures_by_profile(id).await {
+    match server_state.context.service_context.figure_service.get_total_figures_by_profile(id).await {
         Ok(total) => total.to_string().into_response(),
         Err(_) => ServerError::InternalError(format!("Could not get total figures for {}", id)).into_response()
     }
 }
 
-fn figure_url_from_name(base_url: String, name: String) -> String {
-    format!("{}{}", base_url, name)
-}
+// fn figure_url_from_name(base_url: String, name: String) -> String {
+//     format!("{}{}", base_url, name)
+// }
 
-async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, Bytes, u32, u32), anyhow::Error> {
+async fn parse_multipart(mut multipart: Multipart) -> Result<(String, Option<String>, Bytes, u32, u32), anyhow::Error> {
     let mut title: Option<String> = None;
     let mut description: Option<String> = None;
     let mut image: Option<Bytes> = None;
@@ -127,11 +119,10 @@ async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, By
         };
     };
 
-    if title.is_none() && description.is_none() || image.is_none() {
+    if title.is_none() || image.is_none() {
         return Err(ServerError::MissingFieldInForm)?;
     }
     let title = title.unwrap();
-    let description = description.unwrap();
     let image = image.unwrap();
 
     let format = parse_image_format(&image)?.to_vec();

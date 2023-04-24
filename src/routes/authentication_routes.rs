@@ -5,12 +5,28 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use cookie::{Cookie, SameSite};
 use serde::Serialize;
+use serde::Deserialize;
 use tower_cookies::Cookies;
 use crate::{ServerState, Session, SessionOption};
-use crate::database::{SignInForm, SignUpForm};
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::types::IdType;
+use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
+use crate::services::profile_service::ProfileServiceTrait;
+use crate::services::user_service::UserServiceTrait;
+
+#[derive(Deserialize)]
+pub struct SignUpForm {
+    pub email: String,
+    pub password: String,
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct SignInForm {
+    pub email: String,
+    pub password: String,
+}
 
 #[derive(Serialize)]
 struct SignInResponse {
@@ -26,9 +42,8 @@ impl From<Session> for SignInResponse {
 }
 
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
-    return match server_state.database.authenticate_user_by_email(signin.email, signin.password).await {
-        Ok((user, profile)) => {
-            let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
+    return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
+        Ok((user, profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -43,9 +58,8 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 }
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    return match server_state.database.signup_user(signup).await {
-        Ok((user, profile)) => {
-            let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
+    return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
+        Ok((_user, profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -56,12 +70,12 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
             ProfileDTO::from(profile).to_json().into_response()
         }
         Err(e) => e.into_response()
-    }
+    };
 }
 
 pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
     if let Some(mut cookie) = cookies.get("session_id") {
-        match server_state.session_store.invalidate_session(cookie.value()).await {
+        match server_state.context.repository_context.session_repository.remove_by_id(cookie.value()).await {
             Ok(_) => {
                 cookie.set_http_only(true);
                 cookie.set_secure(true);
@@ -71,11 +85,10 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
                 cookie.make_removal();
                 cookies.add(cookie.into_owned());
                 StatusCode::OK.into_response()
-            },
+            }
             Err(e) => e.into_response()
         }
-    }
-    else {
+    } else {
         ServerError::NoSessionReceived.into_response()
     }
 }
@@ -83,10 +96,10 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
 // Return the profile associated with a given session
 pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
     if let Some(cookie) = cookies.get("session_id") {
-        match server_state.session_store.get_data_of_session(cookie.value()).await {
+        match server_state.context.repository_context.session_repository.find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.database.get_profile_by_id(session_data.profile_id).await {
-                    return ProfileDTO::from(profile).to_json().into_response()
+                if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.profile_id).await {
+                    return ProfileDTO::from(profile).to_json().into_response();
                 }
                 ServerError::ResourceNotFound.into_response()
             }
@@ -94,8 +107,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
                 ServerError::NoSessionFound.into_response()
             }
         }
-    }
-    else {
+    } else {
         ServerError::NoSessionReceived.into_response()
     }
 }
