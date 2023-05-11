@@ -1,3 +1,6 @@
+#![feature(async_fn_in_trait)]
+#![feature(closure_lifetime_binder)]
+
 mod database;
 mod session_store;
 mod auth_layer;
