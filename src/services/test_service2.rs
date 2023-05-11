@@ -72,22 +72,21 @@ trait UserServiceTrait: Send + Sync {
 
 struct UserService<T: UserRepositoryTrait + Send + Sync> {
     user_repository: T,
-    db: AppDatabase
+    db: AppDatabase,
 }
 
-struct Repo{
-    db: AppDatabase
+struct Repo {
+    db: AppDatabase,
 }
 
 impl<T: UserRepositoryTrait + Send + Sync> UserServiceTrait for UserService<T> {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(), ServerError<String>> {
         let closure = cb!({}; async |repository: UserRepository, transaction: &Transaction<'_, Postgres>| -> Result<(), ServerError<String>> {
-                // let val = 5;
-                // db.insert_with_session(val, session).await
             repository.create(Some(transaction), "".to_string(), "".to_string(), "".to_string()).await;
             repository.create(Some(transaction), "".to_string(), "".to_string(), "".to_string()).await;
+
             Ok(())
-            });
+        });
         // self.db.execute_transaction(closure).await
         self.user_repository.start_transaction(self.user_repository.clone(), closure).await
     }

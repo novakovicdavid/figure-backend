@@ -55,10 +55,15 @@
 //         //     cb!({}; async |transaction: &Transaction<'_, Postgres>| -> Result<User, ServerError<String>> {
 //         //         self.user_repository.create(Some(&transaction), email, password_hash, username).await
 //         //     })).await
-//         self.user_repository.start_transaction(self.user_repository.clone(),
-//             cb!({}; async |repository: UserRepository, transaction: &Transaction<'_, Postgres>| -> Result<User, ServerError<String>> {
-//                 Err(ServerError::TransactionFailed)
-//             })).await
+//         let closure = cb!({}; async |repository: UserRepository, transaction: &Transaction<'_, Postgres>| -> Result<(User, Profile), ServerError<String>> {
+//                 // let val = 5;
+//                 // db.insert_with_session(val, session).await
+//             repository.create(Some(transaction), "".to_string(), "".to_string(), "".to_string()).await;
+//             repository.create(Some(transaction), "".to_string(), "".to_string(), "".to_string()).await;
+//             Ok(())
+//             });
+//         // self.db.execute_transaction(closure).await
+//         self.user_repository.start_transaction(self.user_repository.clone(), closure).await
 //         // Err(ServerError::TransactionFailed)
 //     }
 // }
