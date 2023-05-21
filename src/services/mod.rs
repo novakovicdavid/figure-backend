@@ -1,3 +1,3 @@
-mod user_service;
-mod test_service;
-mod test_service2;
+pub mod user_service;
+pub mod profile_service;
+pub mod figure_service;

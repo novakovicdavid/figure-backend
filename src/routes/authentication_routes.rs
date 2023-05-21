@@ -26,9 +26,10 @@ impl From<Session> for SignInResponse {
 }
 
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
-    return match server_state.database.authenticate_user_by_email(signin.email, signin.password).await {
+    return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
         Ok((user, profile)) => {
-            let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
+
+            let session = server_state.context.repository_context.session_repository.create(user.id, profile.id, Some(86400)).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -62,7 +63,7 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
 
 pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
     if let Some(mut cookie) = cookies.get("session_id") {
-        match server_state.session_store.invalidate_session(cookie.value()).await {
+        match server_state.context.repository_context.session_repository.remove_by_id(cookie.value()).await {
             Ok(_) => {
                 cookie.set_http_only(true);
                 cookie.set_secure(true);
@@ -84,9 +85,9 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
 // Return the profile associated with a given session
 pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
     if let Some(cookie) = cookies.get("session_id") {
-        match server_state.session_store.get_data_of_session(cookie.value()).await {
+        match server_state.context.repository_context.session_repository.find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.database.get_profile_by_id(session_data.profile_id).await {
+                if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.profile_id).await {
                     return ProfileDTO::from(profile).to_json().into_response()
                 }
                 ServerError::ResourceNotFound.into_response()

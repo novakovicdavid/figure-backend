@@ -98,12 +98,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async_closure"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bf9312adc030e3f6ddfd47b8da63a732d8189890eac78a43725222613107838"
-
-[[package]]
 name = "atoi"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -868,6 +862,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b0cf012f1230e43cd00ebb729c6bb58707ecfa8ad08b52ef3a4ccd2697fc30"
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -953,7 +953,6 @@ dependencies = [
  "anyhow",
  "argon2",
  "async-trait",
- "async_closure",
  "aws-config",
  "aws-credential-types",
  "aws-sdk-s3",
@@ -961,9 +960,9 @@ dependencies = [
  "axum-macros",
  "bytes",
  "cookie",
+ "dyn-clone",
  "env_logger",
  "futures",
- "higher-order-closure",
  "hyper",
  "image",
  "lazy_static",
@@ -1250,12 +1249,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "higher-order-closure"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c450d87a307c754cbd7718dfca84b8904e313157191fae5b249d37aab216c89"
 
 [[package]]
 name = "hkdf"

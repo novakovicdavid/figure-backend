@@ -26,9 +26,6 @@ pub struct SignInForm {
 
 #[async_trait]
 pub trait DatabaseFns: Sync + Send + Debug {
-    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
-    async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: String, bio: String, banner: Option<String>, profile_picture: Option<String>) -> Result<(), String>;
     async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
@@ -46,74 +43,6 @@ struct DatabaseImpl {
 
 #[async_trait]
 impl DatabaseFns for DatabaseImpl {
-    async fn authenticate_user_by_email(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
-        let user_profile_result = sqlx::query_as::<_, UserAndProfileFromQuery>(r#"
-        SELECT users.id AS user_id, users.email, users.password, users.role,
-        profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
-        FROM users
-        INNER JOIN profiles
-        ON users.id = profiles.user_id
-        WHERE users.email = $1
-        "#)
-            .bind(email)
-            .fetch_one(&self.db).await;
-        let (user, profile) = match user_profile_result {
-            Ok(user_and_profile) => (
-                user_and_profile.user,
-                user_and_profile.profile
-            ),
-            Err(Error::RowNotFound) => return Err(ServerError::UserWithEmailNotFound),
-            Err(e) => return Err(ServerError::InternalError(e.to_string()))
-        };
-
-        let parsed_hash_result = PasswordHash::new(&user.password);
-        let parsed_hash = match parsed_hash_result {
-            Ok(hash) => hash,
-            Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
-            }
-        };
-
-        let password_verification = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
-        if password_verification.is_ok() {
-            Ok((user, profile))
-        } else {
-            Err(ServerError::WrongPassword)
-        }
-    }
-
-
-    async fn get_profile_by_id(&self, id: IdType) -> Result<Profile, ServerError<String>> {
-        let query =
-            sqlx::query_as::<_, Profile>(&format!("SELECT id, username, display_name, bio, banner, profile_picture, user_id FROM profiles WHERE user_id = $1"))
-                .bind(id)
-                .fetch_one(&self.db).await;
-        match query {
-            Ok(profile) => Ok(profile),
-            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
-    }
-
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: String, bio: String, banner: Option<String>, profile_picture: Option<String>) -> Result<(), String> {
-        let query =
-            sqlx::query(r#"
-            UPDATE profiles
-            SET display_name = $1, bio = $2, banner = COALESCE($3, banner), profile_picture = COALESCE($4, profile_picture)
-            WHERE profiles.id = $5
-            "#)
-                .bind(display_name)
-                .bind(bio)
-                .bind(banner)
-                .bind(profile_picture)
-                .bind(profile_id)
-                .execute(&self.db).await;
-        match query {
-            Ok(_) => Ok(()),
-            Err(e) => Err(e.to_string())
-        }
-    }
-
     async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>> {
         let query =
             sqlx::query(r#"

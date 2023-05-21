@@ -1,6 +1,5 @@
 use std::future::Future;
 use std::pin::Pin;
-use async_closure::capture_lifetimes::AsyncFnMut;
 use crate::server_errors::ServerError;
 use sqlx::{Postgres, Transaction};
 
