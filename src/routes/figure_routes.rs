@@ -22,34 +22,34 @@ pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): 
     }
 }
 
-// pub async fn browse_figures(State(server_state): State<Arc<ServerState>>) -> Response {
-//     get_figures_with_parameters(State(server_state), None, None).await
-// }
-//
-// pub async fn browse_figures_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path(starting_from_figure_id): Path<IdType>) -> Response {
-//     get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), None).await
-// }
-//
-// pub async fn browse_figures_from_profile(State(server_state): State<Arc<ServerState>>, Path(profile_id): Path<IdType>) -> Response {
-//     get_figures_with_parameters(State(server_state), None, Some(profile_id)).await
-// }
-//
-// pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path((profile_id, starting_from_figure_id)): Path<(IdType, IdType)>) -> Response {
-//     get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), Some(profile_id)).await
-// }
+pub async fn browse_figures(State(server_state): State<Arc<ServerState>>) -> Response {
+    get_figures_with_parameters(State(server_state), None, None).await
+}
 
-// async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
-//     let figures = server_state.database.get_figures(starting_from_figure_id, profile_id, &3).await;
-//     match figures {
-//         Ok(figures) => {
-//             json!({
-//                 "figures": figures
-//             }).to_string().into_response()
-//         }
-//         Err(e) => e.into_response()
-//     }
-// }
-//
+pub async fn browse_figures_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path(starting_from_figure_id): Path<IdType>) -> Response {
+    get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), None).await
+}
+
+pub async fn browse_figures_from_profile(State(server_state): State<Arc<ServerState>>, Path(profile_id): Path<IdType>) -> Response {
+    get_figures_with_parameters(State(server_state), None, Some(profile_id)).await
+}
+
+pub async fn browse_figures_from_profile_starting_from_figure_id(State(server_state): State<Arc<ServerState>>, Path((profile_id, starting_from_figure_id)): Path<(IdType, IdType)>) -> Response {
+    get_figures_with_parameters(State(server_state), Some(starting_from_figure_id), Some(profile_id)).await
+}
+
+async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
+    let figures = server_state.context.service_context.figure_service.find_figures_starting_from_id_with_profile_id(starting_from_figure_id, profile_id, 3).await;
+    match figures {
+        Ok(figures) => {
+            json!({
+                "figures": figures
+            }).to_string().into_response()
+        }
+        Err(e) => e.into_response()
+    }
+}
+
 // pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) -> Response {
 //     let figures = server_state.database.get_figures(None, None, &9).await;
 //     match figures {

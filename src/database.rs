@@ -29,7 +29,7 @@ pub trait DatabaseFns: Sync + Send + Debug {
     async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>>;
     async fn get_figure(&self, id: &IdType) -> Result<FigureDTO, ServerError<String>>;
-    async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
+    // async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>>;
     async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>>;
     async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError<String>>;
 }
@@ -112,48 +112,50 @@ impl DatabaseFns for DatabaseImpl {
         }
     }
 
-    async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>> {
-        let mut query = r#"
-            SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
-            profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
-            from figures
-            INNER JOIN profiles
-            ON figures.profile_id = profiles.id
-            "#.to_string();
-
-        if let Some(starting_from_id) = starting_from_id {
-            query = format!(r#"
-            {}
-            WHERE figures.id < {}
-            "#, query, starting_from_id);
-        }
-
-        if let Some(from_profile) = from_profile {
-            let mut filter = "figures.profile_id = ".to_string();
-            if starting_from_id.is_some() {
-                filter = format!("AND {}", filter);
-            } else {
-                filter = format!("WHERE {}", filter);
-            }
-            query = format!(r#"
-            {}
-            {} {}
-            "#, query, filter, from_profile);
-        }
-
-        query = format!(r#"
-        {}
-        ORDER BY figures.id DESC
-        LIMIT {}
-        "#, query, limit);
-
-        let result = sqlx::query_as::<_, FigureDTO>(&query).fetch_all(&self.db).await;
-        match result {
-            Ok(figures) => Ok(figures),
-            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
-    }
+    // async fn get_figures(&self, starting_from_id: Option<IdType>, from_profile: Option<IdType>, limit: &IdType) -> Result<Vec<FigureDTO>, ServerError<String>> {
+    //     let mut query = r#"
+    //         SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
+    //         profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
+    //         from figures
+    //         INNER JOIN profiles
+    //         ON figures.profile_id = profiles.id
+    //         "#.to_string();
+    //
+    //     if let Some(starting_from_id) = starting_from_id {
+    //         query = format!(r#"
+    //         {}
+    //         WHERE figures.id < {}
+    //         "#, query, starting_from_id);
+    //     }
+    //
+    //     if let Some(from_profile) = from_profile {
+    //         let mut filter = "figures.profile_id = ".to_string();
+    //         if starting_from_id.is_some() {
+    //             filter = format!("AND {}", filter);
+    //         } else {
+    //             filter = format!("WHERE {}", filter);
+    //         }
+    //         query = format!(r#"
+    //         {}
+    //         {} {}
+    //         "#, query, filter, from_profile);
+    //     }
+    //
+    //     query = format!(r#"
+    //     {}
+    //     ORDER BY figures.id DESC
+    //     LIMIT {}
+    //     "#, query, limit);
+    //
+    //     let query = sqlx::query_as::<_, FigureDTO>(&query);
+    //
+    //     let result = sqlx::query_as::<_, FigureDTO>(&query).fetch_all(&self.db).await;
+    //     match result {
+    //         Ok(figures) => Ok(figures),
+    //         Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
+    //         Err(e) => Err(ServerError::InternalError(e.to_string()))
+    //     }
+    // }
 
     async fn create_figure(&self, title: String, description: String, width: i32, height: i32, url: String, profile_id: IdType) -> Result<IdType, ServerError<String>> {
         let result =

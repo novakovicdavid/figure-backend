@@ -15,8 +15,8 @@ pub struct ProfileService<P: ProfileRepositoryTrait> {
 }
 
 impl<P: ProfileRepositoryTrait> ProfileService<P> {
-    pub fn new(profile_repository: P) -> impl ProfileServiceTrait {
-        ProfileService {
+    pub fn new(profile_repository: P) -> Self {
+        Self {
             profile_repository
         }
     }
