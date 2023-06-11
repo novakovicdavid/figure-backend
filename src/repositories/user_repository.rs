@@ -64,7 +64,7 @@ impl UserRepositoryTrait for UserRepository {
 
     async fn get_user_by_email(&self, transaction: Option<&mut Transaction<Postgres>>, email: String) -> Result<User, ServerError<String>> {
         let query =
-            sqlx::query_as::<_, User>("SELECT id, email, password FROM users WHERE email = $1")
+            sqlx::query_as::<_, User>("SELECT id AS user_id, email, password, role FROM users WHERE email = $1")
                 .bind(email);
         let query_result = match transaction {
             Some(transaction) => query.fetch_one(transaction).await,

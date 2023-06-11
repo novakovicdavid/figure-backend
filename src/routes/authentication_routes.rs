@@ -28,7 +28,6 @@ impl From<Session> for SignInResponse {
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
         Ok((user, profile)) => {
-
             let session = server_state.context.repository_context.session_repository.create(user.id, profile.id, Some(86400)).await.unwrap();
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
@@ -44,21 +43,20 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 }
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    // return match server_state.database.signup_user(signup).await {
-    //     Ok((user, profile)) => {
-    //         let session = server_state.session_store.create_session(user.id, profile.id).await.unwrap();
-    //         let mut cookie = Cookie::new("session_id", session.id);
-    //         cookie.set_http_only(true);
-    //         cookie.set_secure(true);
-    //         cookie.set_same_site(SameSite::Strict);
-    //         cookie.set_domain(server_state.domain.to_string());
-    //         cookie.set_path("/");
-    //         cookies.add(cookie);
-    //         ProfileDTO::from(profile).to_json().into_response()
-    //     }
-    //     Err(e) => e.into_response()
-    // }
-    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
+        Ok((user, profile)) => {
+            let session = server_state.context.repository_context.session_repository.create(user.id, profile.id, Some(86400)).await.unwrap();
+            let mut cookie = Cookie::new("session_id", session.id);
+            cookie.set_http_only(true);
+            cookie.set_secure(true);
+            cookie.set_same_site(SameSite::Strict);
+            cookie.set_domain(server_state.domain.to_string());
+            cookie.set_path("/");
+            cookies.add(cookie);
+            ProfileDTO::from(profile).to_json().into_response()
+        }
+        Err(e) => e.into_response()
+    };
 }
 
 pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
@@ -73,11 +71,10 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
                 cookie.make_removal();
                 cookies.add(cookie.into_owned());
                 StatusCode::OK.into_response()
-            },
+            }
             Err(e) => e.into_response()
         }
-    }
-    else {
+    } else {
         ServerError::NoSessionReceived.into_response()
     }
 }
@@ -88,7 +85,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
         match server_state.context.repository_context.session_repository.find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
                 if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.profile_id).await {
-                    return ProfileDTO::from(profile).to_json().into_response()
+                    return ProfileDTO::from(profile).to_json().into_response();
                 }
                 ServerError::ResourceNotFound.into_response()
             }
@@ -96,8 +93,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
                 ServerError::NoSessionFound.into_response()
             }
         }
-    }
-    else {
+    } else {
         ServerError::NoSessionReceived.into_response()
     }
 }
