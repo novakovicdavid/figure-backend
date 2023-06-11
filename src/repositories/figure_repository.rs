@@ -1,5 +1,5 @@
 use dyn_clone::DynClone;
-use sqlx::{Error, Pool, Postgres, Transaction};
+use sqlx::{Error, Pool, Postgres, Row, Transaction};
 use crate::server_errors::ServerError;
 use async_trait::async_trait;
 use crate::entities::dtos::figure_dto::FigureDTO;
@@ -40,23 +40,28 @@ impl FigureRepositoryTrait for FigureRepository {
         }
     }
 
-    async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, figure: Figure) -> Result<Figure, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, mut figure: Figure) -> Result<Figure, ServerError<String>> {
         let query =
-            sqlx::query_as(r#"
+            sqlx::query(r#"
             INSERT INTO figures (id, title, description, width, height, url, profile_id)
             VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)
             RETURNING id;
             "#)
-                .bind(figure.title)
-                .bind(figure.description)
+                .bind(figure.title.clone())
+                .bind(figure.description.clone())
                 .bind(figure.width)
                 .bind(figure.height)
-                .bind(figure.url)
+                .bind(figure.url.clone())
                 .bind(figure.profile_id);
         match transaction {
             Some(transaction) => query.fetch_one(transaction).await,
             None => query.fetch_one(&self.db).await
-        }.map_err(|e| ServerError::InternalError(e.to_string()))
+        }
+            .map(|row| {
+                figure.id = row.get(0);
+                figure
+            })
+            .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 
     async fn find_by_id(&self, transaction: Option<&mut Transaction<Postgres>>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {

@@ -69,37 +69,30 @@ pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) 
 //     }
 // }
 //
-// pub async fn upload_figure(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, multipart: Multipart) -> Response {
-//     let session = match &session.session {
-//         Some(s) => s,
-//         None => return StatusCode::UNAUTHORIZED.into_response()
-//     };
-//
-//     let result = parse_multipart(multipart).await;
-//     let (title, description, image, width, height) = match result {
-//         Ok(tuple) => tuple,
-//         Err(_) => {
-//             return ServerError::InvalidMultipart.into_response();
-//         }
-//     };
-//
-//     let uid = Uuid::new_v4();
-//     let uid = uid.to_string();
-//     if let Err(e) = server_state.storage.upload_object(uid.as_str(), image).await {
-//         return ServerError::InternalError(e.to_string()).into_response();
-//     }
-//     let url = figure_url_from_name(server_state.storage.get_base_url(), uid);
-//
-//     match server_state.database.create_figure(title, description, width as i32, height as i32, url, session.profile_id).await {
-//         Ok(figure_id) => {
-//             json!({
-//                 "figure_id": figure_id
-//             }).to_string().into_response()
-//         }
-//         Err(_) => ServerError::InternalError("Could not create Figure".to_string()).into_response()
-//     }
-// }
-//
+pub async fn upload_figure(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, multipart: Multipart) -> Response {
+    let session = match &session.session {
+        Some(s) => s,
+        None => return StatusCode::UNAUTHORIZED.into_response()
+    };
+
+    let result = parse_multipart(multipart).await;
+    let (title, description, image, width, height) = match result {
+        Ok(tuple) => tuple,
+        Err(_) => {
+            return ServerError::InvalidMultipart.into_response();
+        }
+    };
+
+    match server_state.context.service_context.figure_service.create(title, description, image, width, height, session.profile_id).await {
+        Ok(figure) => {
+            json!({
+                "figure_id": figure.id
+            }).to_string().into_response()
+        }
+        Err(_) => ServerError::InternalError("Could not create Figure".to_string()).into_response()
+    }
+}
+
 // pub async fn get_total_figures_by_profile(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
 //     match server_state.database.get_total_figures_by_profile(id).await {
 //         Ok(total) => total.to_string().into_response(),
@@ -110,57 +103,56 @@ pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) 
 // fn figure_url_from_name(base_url: String, name: String) -> String {
 //     format!("{}{}", base_url, name)
 // }
-//
-// async fn parse_multipart(mut multipart: Multipart) -> Result<(String, String, Bytes, u32, u32), anyhow::Error> {
-//     let mut title: Option<String> = None;
-//     let mut description: Option<String> = None;
-//     let mut image: Option<Bytes> = None;
-//
-//     while let Ok(Some(field)) = multipart.next_field().await {
-//         let name = field.name().context("Multipart parse failed: no field name")?.to_string();
-//         let data = field.bytes().await?;
-//         match name.as_str() {
-//             "title" => title = Some(String::from_utf8(data.to_vec())?),
-//             "description" => description = Some(String::from_utf8(data.to_vec())?),
-//             "file" => image = Some(data),
-//             _ => {}
-//         };
-//     };
-//
-//     if title.is_none() && description.is_none() || image.is_none() {
-//         return Err(ServerError::MissingFieldInForm)?;
-//     }
-//     let title = title.unwrap();
-//     let description = description.unwrap();
-//     let image = image.unwrap();
-//
-//     let format = parse_image_format(&image)?.to_vec();
-//     if !format.contains(&"jpg") && !format.contains(&"jpeg") && !format.contains(&"png") {
-//         return Err(ServerError::InvalidImage)?;
-//     }
-//
-//     let (width, height) = match get_image_dimensions(&image) {
-//         Ok(tuple) => tuple,
-//         Err(_e) => {
-//             return Err(ServerError::InvalidImage)?;
-//         }
-//     };
-//
-//     // Convert to JPEG
-//     let mut buffer = vec![];
-//     let parsed_image = image::load_from_memory(&image)?;
-//     parsed_image.write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Jpeg(90))?;
-//
-//     Ok((title, description, Bytes::from(buffer.to_vec()), width, height))
-// }
-//
-// fn get_image_dimensions(image: &Bytes) -> Result<(u32, u32), anyhow::Error> {
-//     let (width, height) = image::load_from_memory(image)?.dimensions();
-//     let width = width;
-//     let height = height;
-//     Ok((width, height))
-// }
-//
+
+async fn parse_multipart(mut multipart: Multipart) -> Result<(String, Option<String>, Bytes, u32, u32), anyhow::Error> {
+    let mut title: Option<String> = None;
+    let mut description: Option<String> = None;
+    let mut image: Option<Bytes> = None;
+
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name = field.name().context("Multipart parse failed: no field name")?.to_string();
+        let data = field.bytes().await?;
+        match name.as_str() {
+            "title" => title = Some(String::from_utf8(data.to_vec())?),
+            "description" => description = Some(String::from_utf8(data.to_vec())?),
+            "file" => image = Some(data),
+            _ => {}
+        };
+    };
+
+    if title.is_none() || image.is_none() {
+        return Err(ServerError::MissingFieldInForm)?;
+    }
+    let title = title.unwrap();
+    let image = image.unwrap();
+
+    let format = parse_image_format(&image)?.to_vec();
+    if !format.contains(&"jpg") && !format.contains(&"jpeg") && !format.contains(&"png") {
+        return Err(ServerError::InvalidImage)?;
+    }
+
+    let (width, height) = match get_image_dimensions(&image) {
+        Ok(tuple) => tuple,
+        Err(_e) => {
+            return Err(ServerError::InvalidImage)?;
+        }
+    };
+
+    // Convert to JPEG
+    let mut buffer = vec![];
+    let parsed_image = image::load_from_memory(&image)?;
+    parsed_image.write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Jpeg(90))?;
+
+    Ok((title, description, Bytes::from(buffer.to_vec()), width, height))
+}
+
+fn get_image_dimensions(image: &Bytes) -> Result<(u32, u32), anyhow::Error> {
+    let (width, height) = image::load_from_memory(image)?.dimensions();
+    let width = width;
+    let height = height;
+    Ok((width, height))
+}
+
 pub fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {
     Ok(image::io::Reader::new(Cursor::new(data))
         .with_guessed_format()?

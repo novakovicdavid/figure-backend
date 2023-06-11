@@ -27,6 +27,7 @@ pub enum ServerError<T: ToString> {
     MissingFieldInForm,
     InvalidMultipart,
     TransactionFailed,
+    ImageDimensionsTooLarge,
     InternalError(T)
 }
 
@@ -54,6 +55,7 @@ impl Display for ServerError<String> {
             ServerError::MissingFieldInForm => "missing-field-in-form",
             ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::TransactionFailed => "transaction-failed",
+            ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
             ServerError::InternalError(error) => {
                 error!("Internal server error: {}", error);
                 "internal-error"
@@ -94,6 +96,7 @@ impl IntoResponse for ServerError<String> {
             ServerError::MissingFieldInForm => StatusCode::BAD_REQUEST,
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::TransactionFailed => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
             ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR
         };
         (
