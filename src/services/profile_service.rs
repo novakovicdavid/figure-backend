@@ -39,17 +39,17 @@ impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileServiceTrait for Profile
 
         if let Some(banner) = banner {
             let url = format!("banners/{}", Uuid::new_v4());
-            if let Err(e) = self.storage.upload_image(url.as_str(), banner).await {
-                return Err(ServerError::InternalError(e.to_string()));
-            }
-            banner_url = Some(format!("{}{}", self.storage.get_base_url(), url));
+            banner_url = self.storage.upload_image(url.as_str(), banner)
+                .await
+                .map(Some)
+                .map_err(|e| ServerError::InternalError(e.to_string()))?;
         }
         if let Some(profile_picture) = profile_picture {
             let url = format!("profile_pictures/{}", Uuid::new_v4());
-            if let Err(e) = self.storage.upload_image(url.as_str(), profile_picture).await {
-                return Err(ServerError::InternalError(e.to_string()));
-            }
-            profile_picture_url = Some(format!("{}{}", self.storage.get_base_url(), url));
+            profile_picture_url = self.storage.upload_image(url.as_str(), profile_picture)
+                .await
+                .map(Some)
+                .map_err(|e| ServerError::InternalError(e.to_string()))?;
         }
         self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
     }
