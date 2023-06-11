@@ -44,7 +44,7 @@ use crate::repositories::user_repository::{UserRepository, UserRepositoryTrait};
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, landing_page_figures};
 use crate::routes::misc_routes::healthcheck;
-use crate::routes::profile_routes::{get_profile};
+use crate::routes::profile_routes::{get_profile, update_profile};
 use crate::services::figure_service::FigureService;
 use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
@@ -52,7 +52,6 @@ use crate::services::user_service::UserService;
 
 pub struct ServerState {
     context: Context,
-    storage: ContentStore,
     domain: String,
 }
 
@@ -118,8 +117,8 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     info!("Waiting for stores...");
     let db_pool = db_pool_future.await?;
     let session_store = session_store_connection_future.await??;
-    let context = create_context(db_pool, session_store);
-    let server_state = create_server_state(context, content_store, domain);
+    let context = create_context(db_pool, session_store, content_store);
+    let server_state = create_server_state(context, domain);
 
     info!("Setting up routes and layers...");
     let app = create_app(server_state, cors, authentication_extension);
@@ -137,7 +136,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
 fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
     Router::new()
-        // .route("/profile/update", post(update_profile))
+        .route("/profile/update", post(update_profile))
         // .route("/figures/upload", post(upload_figure))
         // Disable the default limit
         .layer(DefaultBodyLimit::disable())
@@ -169,22 +168,20 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
 
 fn create_server_state(
     context: Context,
-    storage: ContentStore,
     domain: String) -> Arc<ServerState> {
     Arc::new(ServerState {
         context,
-        storage,
         domain,
     })
 }
 
-fn create_context(db_pool: Pool<Postgres>, session_store: ConnectionManager) -> Context {
+fn create_context(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage) -> Context {
     let user_repository = UserRepository::new(db_pool.clone());
     let profile_repository = ProfileRepository::new(db_pool.clone());
     let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
     let user_service = UserService::new(dyn_clone::clone(&user_repository), dyn_clone::clone(&profile_repository));
-    let profile_service = ProfileService::new(dyn_clone::clone(&profile_repository));
+    let profile_service = ProfileService::new(dyn_clone::clone(&profile_repository), dyn_clone::clone(&content_store));
     let figure_service = FigureService::new(dyn_clone::clone(&figure_repository));
     let repository_context = RepositoryContext::new(Box::new(user_repository), Box::new(profile_repository), Box::new(figure_repository), Box::new(session_repository));
     let service_context = ServiceContext::new(Box::new(user_service), Box::new(profile_service), Box::new(figure_service));

@@ -1,4 +1,7 @@
 use async_trait::async_trait;
+use bytes::Bytes;
+use uuid::Uuid;
+use crate::content_store::ContentStore;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
@@ -7,28 +10,47 @@ use crate::server_errors::ServerError;
 #[async_trait]
 pub trait ProfileServiceTrait: Send + Sync {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
+    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>>;
 }
 
-pub struct ProfileService<P: ProfileRepositoryTrait> {
+pub struct ProfileService<P: ProfileRepositoryTrait, S: ContentStore> {
     profile_repository: P,
+    storage: S,
 }
 
-impl<P: ProfileRepositoryTrait> ProfileService<P> {
-    pub fn new(profile_repository: P) -> Self {
+impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileService<P, S> {
+    pub fn new(profile_repository: P, storage: S) -> Self {
         Self {
-            profile_repository
+            profile_repository,
+            storage
         }
     }
 }
 
 #[async_trait]
-impl<P: ProfileRepositoryTrait> ProfileServiceTrait for ProfileService<P> {
+impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileServiceTrait for ProfileService<P, S> {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>> {
         self.profile_repository.find_by_id(None, profile_id).await
     }
 
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>> {
-        self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner, profile_picture).await
+    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>> {
+        let mut banner_url = None;
+        let mut profile_picture_url = None;
+
+        if let Some(banner) = banner {
+            let url = format!("banners/{}", Uuid::new_v4());
+            if let Err(e) = self.storage.upload_object(url.as_str(), banner).await {
+                return Err(ServerError::InternalError(e.to_string()));
+            }
+            banner_url = Some(format!("{}{}", self.storage.get_base_url(), url));
+        }
+        if let Some(profile_picture) = profile_picture {
+            let url = format!("profile_pictures/{}", Uuid::new_v4());
+            if let Err(e) = self.storage.upload_object(url.as_str(), profile_picture).await {
+                return Err(ServerError::InternalError(e.to_string()));
+            }
+            profile_picture_url = Some(format!("{}{}", self.storage.get_base_url(), url));
+        }
+        self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
     }
 }

@@ -161,9 +161,9 @@ pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) 
 //     Ok((width, height))
 // }
 //
-// pub fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {
-//     Ok(image::io::Reader::new(Cursor::new(data))
-//         .with_guessed_format()?
-//         .format().context("No format found for image")?
-//         .extensions_str())
-// }
+pub fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {
+    Ok(image::io::Reader::new(Cursor::new(data))
+        .with_guessed_format()?
+        .format().context("No format found for image")?
+        .extensions_str())
+}

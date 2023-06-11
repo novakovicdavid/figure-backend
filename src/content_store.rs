@@ -1,20 +1,19 @@
-use std::env;
 use async_trait::async_trait;
 use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_sdk_s3::{Client, Config, Credentials};
 use aws_sdk_s3::Region;
 use aws_sdk_s3::types::ByteStream;
 use bytes::Bytes;
+use dyn_clone::DynClone;
 use crate::server_errors::ServerError;
 
 #[async_trait]
-pub trait ContentStoreFns: Sync + Send {
+pub trait ContentStore: Send + Sync + DynClone {
     async fn upload_object(&self, name: &str, bytes: Bytes) -> Result<(), ServerError<String>>;
     fn get_base_url(&self) -> String;
 }
 
-pub type ContentStore = Box<dyn ContentStoreFns>;
-
+#[derive(Clone)]
 pub struct S3Storage {
     client: Client,
     bucket: String,
@@ -22,7 +21,7 @@ pub struct S3Storage {
 }
 
 #[async_trait]
-impl ContentStoreFns for S3Storage {
+impl ContentStore for S3Storage {
     async fn upload_object(&self, name: &str, bytes: Bytes) -> Result<(), ServerError<String>> {
         self.client.put_object()
             .bucket(&self.bucket)
@@ -40,7 +39,7 @@ impl ContentStoreFns for S3Storage {
 }
 
 impl S3Storage {
-    pub fn new_store(key_id: String, app_key: String, s3_region: String, bucket_endpoint: String, base_storage_url: String, bucket: String) -> ContentStore {
+    pub fn new_store(key_id: String, app_key: String, s3_region: String, bucket_endpoint: String, base_storage_url: String, bucket: String) -> Self {
         let provider_name = "my-creds";
         let creds = Credentials::new(key_id, app_key, None, None, provider_name);
 
@@ -52,10 +51,10 @@ impl S3Storage {
 
         let client = Client::from_conf(config);
 
-        Box::new(Self {
+        Self {
             client,
             bucket,
             base_storage_url
-        })
+        }
     }
 }
