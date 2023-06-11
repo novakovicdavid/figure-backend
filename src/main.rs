@@ -42,7 +42,7 @@ use crate::repositories::profile_repository::{ProfileRepository, ProfileReposito
 use crate::repositories::session_repository::SessionRepository;
 use crate::repositories::user_repository::{UserRepository, UserRepositoryTrait};
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
-use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure};
+use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, landing_page_figures};
 use crate::routes::misc_routes::healthcheck;
 use crate::routes::profile_routes::{get_profile};
 use crate::services::figure_service::FigureService;
@@ -151,7 +151,7 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .route("/session/load", get(load_session))
         .route("/figures/:id", get(get_figure))
         .route("/figures/browse", get(browse_figures))
-        // .route("/figures/landing-page", get(landing_page_figures))
+        .route("/figures/landing-page", get(landing_page_figures))
         .route("/figures/browse/:starting_from_figure_id", get(browse_figures_starting_from_figure_id))
         .route("/profile/:profile_id/browse", get(browse_figures_from_profile))
         // .route("/profile/:profile_id/total_figures", get(get_total_figures_by_profile))

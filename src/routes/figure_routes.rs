@@ -50,18 +50,18 @@ async fn get_figures_with_parameters(State(server_state): State<Arc<ServerState>
     }
 }
 
-// pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) -> Response {
-//     let figures = server_state.database.get_figures(None, None, &9).await;
-//     match figures {
-//         Ok(figures) => {
-//             json!({
-//                 "figures": figures
-//             }).to_string().into_response()
-//         }
-//         Err(e) => e.into_response()
-//     }
-// }
-//
+pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) -> Response {
+    let figures = server_state.context.service_context.figure_service.find_figures_starting_from_id_with_profile_id(None, None, 9).await;
+    match figures {
+        Ok(figures) => {
+            json!({
+                "figures": figures
+            }).to_string().into_response()
+        }
+        Err(e) => e.into_response()
+    }
+}
+
 // pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>>) -> Response {
 //     match server_state.database.get_total_figures_count().await {
 //         Ok(id) => id.to_string().into_response(),
