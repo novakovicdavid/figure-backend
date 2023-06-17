@@ -3,7 +3,6 @@ use sqlx::{Pool, Postgres, Row, Transaction};
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
-use dyn_clone::DynClone;
 
 #[derive(Clone)]
 pub struct ProfileRepository {
@@ -11,16 +10,22 @@ pub struct ProfileRepository {
 }
 
 impl ProfileRepository {
-    pub fn new(pool: Pool<Postgres>) -> impl ProfileRepositoryTrait {
-        ProfileRepository {
+    pub fn new(pool: Pool<Postgres>) -> Self {
+        Self {
             db: pool
         }
     }
 }
 
 #[async_trait]
-pub trait ProfileRepositoryTrait: Send + Sync + DynClone {
+pub trait ProfileRepositoryTrait: Send + Sync + Clone {
+    type Repo: ProfileRepositoryTrait;
     async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>>;
+    // async fn do_it<F, Fut, R>(&self, f: F) -> Result<R, ServerError<String>>
+    //     where F: FnOnce(&Transaction<Postgres>) -> Fut + Send,
+    //           Fut: Future<Output=Result<R, ServerError<String>>> + Send,
+    //           R: Send;
+    // async fn takes_closure (&self, f: impl Fn(&'_ mut Self::Repo) -> BoxFuture<'_, ()>);
     async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn find_by_id(&self, transaction: Option<&mut Transaction<Postgres>>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn find_by_user_id(&self, transaction: Option<&mut Transaction<Postgres>>, user_id: IdType) -> Result<Profile, ServerError<String>>;
@@ -29,14 +34,41 @@ pub trait ProfileRepositoryTrait: Send + Sync + DynClone {
 
 #[async_trait]
 impl ProfileRepositoryTrait for ProfileRepository {
+    type Repo = ProfileRepository;
+
     async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>> {
         match self.db.begin().await {
             Ok(transaction) => Ok(transaction),
-            Err(e) => Err(ServerError::TransactionFailed)
+            Err(_e) => Err(ServerError::TransactionFailed)
         }
     }
 
-    async fn create(&self, mut transaction: Option<&mut Transaction<Postgres>>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    // async fn takes_closure (&self, f: impl Fn(&'_ mut Self::Repo) -> BoxFuture<'_, ()>)
+    // {
+    //     f(&mut Self).await;
+    // }
+
+    // async fn do_it<F, Fut, R>(&self, f: F) -> Result<R, ServerError<String>>
+    //     where F: FnOnce(&Transaction<Postgres>) -> Fut + Send,
+    //           Fut: Future<Output=Result<R, ServerError<String>>> + Send,
+    //           R: Send {
+    //     let transaction_result = self.db.begin().await;
+    //     if let Ok(transaction) = transaction_result {
+    //         let result = f(&transaction).await;
+    //         if let Ok(result) = result {
+    //             let commit_result = transaction.commit().await.map_err(|e| ServerError::InternalError(e.to_string()));
+    //             if commit_result.is_ok() {
+    //                 return Ok(result);
+    //             }
+    //             return Err(ServerError::TransactionFailed);
+    //         }
+    //         return Err(ServerError::TransactionFailed);
+    //     } else {
+    //         Err(ServerError::TransactionFailed)
+    //     }
+    // }
+
+    async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
         let query = sqlx::query(r#"
             INSERT INTO profiles (username, user_id)
             VALUES ($1, $2)
@@ -119,7 +151,7 @@ impl ProfileRepositoryTrait for ProfileRepository {
             Some(transaction) => query.execute(transaction).await,
             None => query.execute(&self.db).await
         }
-            .map(|result| ())
+            .map(|_result| ())
             .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 }

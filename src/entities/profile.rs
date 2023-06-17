@@ -1,5 +1,4 @@
 use serde::Serialize;
-use std::fmt::{Display, Formatter};
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
 use crate::entities::types::IdType;

@@ -5,12 +5,28 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use cookie::{Cookie, SameSite};
 use serde::Serialize;
+use serde::Deserialize;
 use tower_cookies::Cookies;
 use crate::{ServerState, Session, SessionOption};
-use crate::database::{SignInForm, SignUpForm};
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::types::IdType;
+use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
+use crate::services::profile_service::ProfileServiceTrait;
+use crate::services::user_service::UserServiceTrait;
+
+#[derive(Deserialize)]
+pub struct SignUpForm {
+    pub email: String,
+    pub password: String,
+    pub username: String,
+}
+
+#[derive(Deserialize)]
+pub struct SignInForm {
+    pub email: String,
+    pub password: String,
+}
 
 #[derive(Serialize)]
 struct SignInResponse {

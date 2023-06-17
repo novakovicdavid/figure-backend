@@ -7,12 +7,13 @@ use uuid::Uuid;
 use crate::Session;
 use crate::server_errors::ServerError;
 
+#[derive(Clone)]
 pub struct SessionRepository {
     connection: ConnectionManager,
 }
 
 impl SessionRepository {
-    pub fn new(connection: ConnectionManager) -> SessionRepository {
+    pub fn new(connection: ConnectionManager) -> Self {
         SessionRepository {
             connection
         }
@@ -26,7 +27,7 @@ pub struct SessionValueInStore {
 }
 
 #[async_trait]
-pub trait SessionRepositoryTrait: Send + Sync {
+pub trait SessionRepositoryTrait: Send + Sync + Clone {
     async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
     async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<SessionValueInStore, ServerError<String>>;
     async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>>;

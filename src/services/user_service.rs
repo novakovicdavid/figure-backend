@@ -9,8 +9,6 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::entities::user::User;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
-use sqlx::{Postgres, Transaction};
-use tokio::task;
 use crate::entities::profile::Profile;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
 use crate::repositories::user_repository::UserRepositoryTrait;
@@ -22,18 +20,19 @@ lazy_static! {
 }
 
 #[async_trait]
-pub trait UserServiceTrait: Send + Sync {
+pub trait UserServiceTrait: Send + Sync + Clone {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>>;
     async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
 }
 
+#[derive(Clone)]
 pub struct UserService<U: UserRepositoryTrait, P: ProfileRepositoryTrait> {
     user_repository: U,
     profile_repository: P,
 }
 
 impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserService<U, P> {
-    pub fn new(user_repository: U, profile_repository: P) -> impl UserServiceTrait {
+    pub fn new(user_repository: U, profile_repository: P) -> Self {
         UserService {
             user_repository,
             profile_repository

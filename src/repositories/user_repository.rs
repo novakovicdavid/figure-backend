@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row, Transaction};
 use crate::entities::user::{User};
 use crate::server_errors::ServerError;
-use dyn_clone::DynClone;
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -10,7 +9,7 @@ pub struct UserRepository {
 }
 
 impl UserRepository {
-    pub fn new(pool: Pool<Postgres>) -> impl UserRepositoryTrait {
+    pub fn new(pool: Pool<Postgres>) -> Self {
         UserRepository {
             db: pool
         }
@@ -18,7 +17,7 @@ impl UserRepository {
 }
 
 #[async_trait]
-pub trait UserRepositoryTrait: Send + Sync + DynClone {
+pub trait UserRepositoryTrait: Send + Sync + Clone {
     async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>>;
     async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
     async fn get_user_by_email(&self, transaction: Option<&mut Transaction<Postgres>>, email: String) -> Result<User, ServerError<String>>;
@@ -29,7 +28,7 @@ impl UserRepositoryTrait for UserRepository {
     async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>> {
         match self.db.begin().await {
             Ok(transaction) => Ok(transaction),
-            Err(e) => Err(ServerError::TransactionFailed)
+            Err(_e) => Err(ServerError::TransactionFailed)
         }
     }
 

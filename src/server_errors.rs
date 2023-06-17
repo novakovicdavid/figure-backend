@@ -1,7 +1,6 @@
 use serde::{Serialize};
 use std::fmt::{Display, Formatter};
-use axum::body::BoxBody;
-use axum::http::{Response, StatusCode};
+use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
 use log::error;

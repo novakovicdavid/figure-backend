@@ -1,18 +1,17 @@
-use std::io::{BufWriter, Cursor};
+use std::io::Cursor;
 use std::sync::Arc;
 use anyhow::Context;
 use axum::Extension;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use bytes::{BufMut, Bytes};
-use image::{ColorType, GenericImageView, ImageBuffer};
+use bytes::Bytes;
+use image::GenericImageView;
 use serde_json::json;
-use uuid::Uuid;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::{ServerState, SessionOption};
-use crate::entities::dtos::figure_dto::FigureDTO;
+use crate::services::figure_service::FigureServiceTrait;
 
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
     let figure = server_state.context.service_context.figure_service.find_figure_by_id(id).await;

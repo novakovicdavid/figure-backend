@@ -4,11 +4,10 @@ use aws_sdk_s3::{Client, Config, Credentials};
 use aws_sdk_s3::Region;
 use aws_sdk_s3::types::ByteStream;
 use bytes::Bytes;
-use dyn_clone::DynClone;
 use crate::server_errors::ServerError;
 
 #[async_trait]
-pub trait ContentStore: Send + Sync + DynClone {
+pub trait ContentStore: Send + Sync + Clone {
     async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError<String>>;
     fn get_base_url(&self) -> String;
 }
