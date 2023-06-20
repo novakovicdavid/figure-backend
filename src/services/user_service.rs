@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use async_trait::async_trait;
 use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Algorithm::Argon2id;
@@ -11,6 +12,7 @@ use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::profile::Profile;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
+use crate::repositories::transaction::TransactionTrait;
 use crate::repositories::user_repository::UserRepositoryTrait;
 
 
@@ -35,13 +37,13 @@ impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserService<U, P> {
     pub fn new(user_repository: U, profile_repository: P) -> Self {
         UserService {
             user_repository,
-            profile_repository
+            profile_repository,
         }
     }
 }
 
 #[async_trait]
-impl<T: UserRepositoryTrait + Send + Sync, P: ProfileRepositoryTrait> UserServiceTrait for UserService<T, P> {
+impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserServiceTrait for UserService<U, P> {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);

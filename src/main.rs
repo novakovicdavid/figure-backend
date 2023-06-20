@@ -38,6 +38,7 @@ use crate::entities::types::IdType;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
+use crate::repositories::transaction::PostgresTransaction;
 use crate::repositories::user_repository::UserRepository;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, landing_page_figures, upload_figure};
@@ -59,6 +60,9 @@ type RepositoryContextType = RepositoryContext<
     FigureRepository,
     SessionRepository
 >;
+
+// Transaction type used by repositories
+pub type MyTransaction = PostgresTransaction;
 
 type ContextType = Context<
     ServiceContextType,

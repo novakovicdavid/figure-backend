@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
@@ -5,6 +6,7 @@ use crate::content_store::ContentStore;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
+use crate::repositories::transaction::TransactionTrait;
 use crate::server_errors::ServerError;
 
 #[async_trait]
@@ -22,7 +24,7 @@ impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileService<P, S> {
     pub fn new(profile_repository: P, storage: S) -> Self {
         Self {
             profile_repository,
-            storage
+            storage,
         }
     }
 }

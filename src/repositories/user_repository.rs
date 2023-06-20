@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row, Transaction};
 use crate::entities::user::{User};
+use crate::MyTransaction;
+use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]
@@ -18,21 +20,21 @@ impl UserRepository {
 
 #[async_trait]
 pub trait UserRepositoryTrait: Send + Sync + Clone {
-    async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>>;
-    async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
+    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>>;
+    async fn create(&self, transaction: Option<&mut MyTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
     async fn get_user_by_email(&self, transaction: Option<&mut Transaction<Postgres>>, email: String) -> Result<User, ServerError<String>>;
 }
 
 #[async_trait]
 impl UserRepositoryTrait for UserRepository {
-    async fn start_transaction(&self) -> Result<Transaction<Postgres>, ServerError<String>> {
+    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>> {
         match self.db.begin().await {
-            Ok(transaction) => Ok(transaction),
+            Ok(transaction) => Ok(PostgresTransaction::new(transaction)),
             Err(_e) => Err(ServerError::TransactionFailed)
         }
     }
 
-    async fn create(&self, transaction: Option<&mut Transaction<Postgres>>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut MyTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
         let query = sqlx::query(r#"
             INSERT INTO users (email, password, role)
             VALUES ($1, $2, 'user')
@@ -40,7 +42,7 @@ impl UserRepositoryTrait for UserRepository {
             .bind(email.to_lowercase())
             .bind(&password_hash);
         let query_result = match transaction {
-            Some(transaction) => query.fetch_one(transaction).await,
+            Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
         };
 
