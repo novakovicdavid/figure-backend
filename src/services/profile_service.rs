@@ -6,7 +6,7 @@ use crate::content_store::ContentStore;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
-use crate::repositories::transaction::TransactionTrait;
+use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
 use crate::server_errors::ServerError;
 
 #[async_trait]
@@ -15,22 +15,26 @@ pub trait ProfileServiceTrait: Send + Sync {
     async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>>;
 }
 
-pub struct ProfileService<P: ProfileRepositoryTrait, S: ContentStore> {
+pub struct ProfileService<TC: TransactionCreator<T>, T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> {
     profile_repository: P,
     storage: S,
+    transaction_creator: TC,
+    marker: PhantomData<T>,
 }
 
-impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileService<P, S> {
-    pub fn new(profile_repository: P, storage: S) -> Self {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> ProfileService<TC, T, P, S> {
+    pub fn new(transaction_creator: TC, profile_repository: P, storage: S) -> Self {
         Self {
             profile_repository,
             storage,
+            transaction_creator,
+            marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<P: ProfileRepositoryTrait, S: ContentStore> ProfileServiceTrait for ProfileService<P, S> {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> ProfileServiceTrait for ProfileService<TC, T, P, S> {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>> {
         self.profile_repository.find_by_id(None, profile_id).await
     }

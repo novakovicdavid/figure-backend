@@ -38,7 +38,7 @@ use crate::entities::types::IdType;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
-use crate::repositories::transaction::PostgresTransaction;
+use crate::repositories::transaction::{PostgresTransaction, PostgresTransactionCreator};
 use crate::repositories::user_repository::UserRepository;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, landing_page_figures, upload_figure};
@@ -49,20 +49,22 @@ use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
 
 type ServiceContextType = ServiceContext<
-    UserService<UserRepository, ProfileRepository>,
-    ProfileService<ProfileRepository, S3Storage>,
-    FigureService<FigureRepository, S3Storage>
+    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository>,
+    ProfileService<PostgresTransactionCreator, PostgresTransaction, ProfileRepository, S3Storage>,
+    FigureService<PostgresTransaction, FigureRepository, S3Storage>
 >;
 
 type RepositoryContextType = RepositoryContext<
     UserRepository,
     ProfileRepository,
     FigureRepository,
-    SessionRepository
+    SessionRepository,
+    PostgresTransactionCreator,
 >;
 
 // Transaction type used by repositories
 pub type MyTransaction = PostgresTransaction;
+pub type MyConnection = Pool<Postgres>;
 
 type ContextType = Context<
     ServiceContextType,
@@ -184,12 +186,13 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
 fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState> {
     let user_repository = UserRepository::new(db_pool.clone());
     let profile_repository = ProfileRepository::new(db_pool.clone());
-    let figure_repository = FigureRepository::new(db_pool);
+    let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
-    let user_service = UserService::new(user_repository.clone(), profile_repository.clone());
-    let profile_service = ProfileService::new(profile_repository.clone(), content_store.clone());
+    let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
+    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone());
+    let profile_service = ProfileService::new(transaction_starter.clone(), profile_repository.clone(), content_store.clone());
     let figure_service = FigureService::new(figure_repository.clone(), content_store);
-    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository);
+    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);
     let service_context = ServiceContext::new(user_service, profile_service, figure_service);
     let context = Context::new(service_context, repository_context);
 

@@ -12,7 +12,7 @@ use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::profile::Profile;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
-use crate::repositories::transaction::TransactionTrait;
+use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
 use crate::repositories::user_repository::UserRepositoryTrait;
 
 
@@ -22,28 +22,32 @@ lazy_static! {
 }
 
 #[async_trait]
-pub trait UserServiceTrait: Send + Sync + Clone {
+pub trait UserServiceTrait: Send + Sync {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>>;
     async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
 }
 
 #[derive(Clone)]
-pub struct UserService<U: UserRepositoryTrait, P: ProfileRepositoryTrait> {
+pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> {
     user_repository: U,
     profile_repository: P,
+    transaction_creator: TC,
+    marker: PhantomData<T>,
 }
 
-impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserService<U, P> {
-    pub fn new(user_repository: U, profile_repository: P) -> Self {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> UserService<TC, T, U, P> {
+    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P) -> Self {
         UserService {
             user_repository,
             profile_repository,
+            transaction_creator,
+            marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserServiceTrait for UserService<U, P> {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> UserServiceTrait for UserService<TC, T, U, P> {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
@@ -58,7 +62,7 @@ impl<U: UserRepositoryTrait, P: ProfileRepositoryTrait> UserServiceTrait for Use
             Err(e) => return Err(e)
         };
 
-        match self.user_repository.start_transaction().await {
+        match self.transaction_creator.create().await {
             Ok(mut transaction) => {
                 let user_result = self.user_repository.create(Some(&mut transaction), email.to_string(), password_hash.to_string()).await;
                 if let Ok(user) = user_result {

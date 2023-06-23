@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Row, Transaction};
+use sqlx::{Executor, Pool, Postgres, Row, Transaction};
 use crate::entities::user::{User};
 use crate::MyTransaction;
-use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
+use crate::repositories::transaction::{PostgresTransaction, TransactionCreator, TransactionTrait};
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]
@@ -19,22 +19,14 @@ impl UserRepository {
 }
 
 #[async_trait]
-pub trait UserRepositoryTrait: Send + Sync + Clone {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>>;
-    async fn create(&self, transaction: Option<&mut MyTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
+pub trait UserRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
+    async fn create(&self, transaction: Option<&mut T>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
     async fn get_user_by_email(&self, transaction: Option<&mut Transaction<Postgres>>, email: String) -> Result<User, ServerError<String>>;
 }
 
 #[async_trait]
-impl UserRepositoryTrait for UserRepository {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>> {
-        match self.db.begin().await {
-            Ok(transaction) => Ok(PostgresTransaction::new(transaction)),
-            Err(_e) => Err(ServerError::TransactionFailed)
-        }
-    }
-
-    async fn create(&self, transaction: Option<&mut MyTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
+impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
         let query = sqlx::query(r#"
             INSERT INTO users (email, password, role)
             VALUES ($1, $2, 'user')

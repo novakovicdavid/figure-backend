@@ -20,24 +20,16 @@ impl ProfileRepository {
 }
 
 #[async_trait]
-pub trait ProfileRepositoryTrait: Send + Sync + Clone {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>>;
-    async fn create(&self, transaction: Option<&mut MyTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>>;
+pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
+    async fn create(&self, transaction: Option<&mut T>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn find_by_user_id(&self, transaction: Option<&mut MyTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn update_profile_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
 }
 
 #[async_trait]
-impl ProfileRepositoryTrait for ProfileRepository {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>> {
-        match self.db.begin().await {
-            Ok(transaction) => Ok(PostgresTransaction::new(transaction)),
-            Err(_e) => Err(ServerError::TransactionFailed)
-        }
-    }
-
-    async fn create(&self, transaction: Option<&mut MyTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
+impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
         let query = sqlx::query(r#"
             INSERT INTO profiles (username, user_id)
             VALUES ($1, $2)

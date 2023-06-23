@@ -21,9 +21,8 @@ impl FigureRepository {
 }
 
 #[async_trait]
-pub trait FigureRepositoryTrait: Send + Sync + Clone {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>>;
-    async fn create(&self, transaction: Option<&mut MyTransaction>, figure: Figure) -> Result<Figure, ServerError<String>>;
+pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
+    async fn create(&self, transaction: Option<&mut T>, figure: Figure) -> Result<Figure, ServerError<String>>;
     async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>>;
     // async fn find_by_profile_id(&self, transaction: Option<&mut Transaction<Postgres>>, profile_id: IdType) -> Result<Figure, ServerError<String>>;
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut MyTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
@@ -32,14 +31,7 @@ pub trait FigureRepositoryTrait: Send + Sync + Clone {
 }
 
 #[async_trait]
-impl FigureRepositoryTrait for FigureRepository {
-    async fn start_transaction(&self) -> Result<MyTransaction, ServerError<String>> {
-        match self.db.begin().await {
-            Ok(transaction) => Ok(PostgresTransaction::new(transaction)),
-            Err(_e) => Err(ServerError::TransactionFailed)
-        }
-    }
-
+impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
     async fn create(&self, transaction: Option<&mut MyTransaction>, mut figure: Figure) -> Result<Figure, ServerError<String>> {
         let query =
             sqlx::query(r#"
