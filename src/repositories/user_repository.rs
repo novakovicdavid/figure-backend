@@ -1,8 +1,7 @@
 use async_trait::async_trait;
-use sqlx::{Executor, Pool, Postgres, Row, Transaction};
+use sqlx::{Pool, Postgres, Row, Transaction};
 use crate::entities::user::{User};
-use crate::MyTransaction;
-use crate::repositories::transaction::{PostgresTransaction, TransactionCreator, TransactionTrait};
+use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]

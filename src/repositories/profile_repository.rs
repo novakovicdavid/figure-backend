@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row, Transaction};
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
-use crate::MyTransaction;
 use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
 
@@ -22,9 +21,9 @@ impl ProfileRepository {
 #[async_trait]
 pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn create(&self, transaction: Option<&mut T>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn find_by_user_id(&self, transaction: Option<&mut MyTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn update_profile_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
+    async fn find_by_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
+    async fn find_by_user_id(&self, transaction: Option<&mut T>, user_id: IdType) -> Result<Profile, ServerError<String>>;
+    async fn update_profile_by_id(&self, transaction: Option<&mut T>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
 }
 
 #[async_trait]
@@ -66,7 +65,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         }
     }
 
-    async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>> {
         let query =
             sqlx::query_as::<_, Profile>("SELECT * FROM profiles WHERE id = $1")
                 .bind(profile_id);
@@ -81,7 +80,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         }
     }
 
-    async fn find_by_user_id(&self, transaction: Option<&mut MyTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_user_id(&self, transaction: Option<&mut PostgresTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>> {
         let query =
             sqlx::query_as::<_, Profile>("SELECT * FROM profiles WHERE user_id = $1")
                 .bind(user_id);
@@ -96,7 +95,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         }
     }
 
-    async fn update_profile_by_id(&self, transaction: Option<&mut MyTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>> {
+    async fn update_profile_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>> {
         let query =
             sqlx::query(r#"
             UPDATE profiles

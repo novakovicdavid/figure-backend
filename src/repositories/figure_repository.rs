@@ -1,10 +1,9 @@
-use sqlx::{Error, Pool, Postgres, Row, Transaction};
+use sqlx::{Error, Pool, Postgres, Row};
 use crate::server_errors::ServerError;
 use async_trait::async_trait;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::figure::Figure;
 use crate::entities::types::IdType;
-use crate::MyTransaction;
 use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 
 #[derive(Clone)]
@@ -23,16 +22,16 @@ impl FigureRepository {
 #[async_trait]
 pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn create(&self, transaction: Option<&mut T>, figure: Figure) -> Result<Figure, ServerError<String>>;
-    async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>>;
+    async fn find_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>>;
     // async fn find_by_profile_id(&self, transaction: Option<&mut Transaction<Postgres>>, profile_id: IdType) -> Result<Figure, ServerError<String>>;
-    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut MyTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
-    async fn update_figure(&self, transaction: Option<&mut MyTransaction>, figure: Figure) -> Result<(), ServerError<String>>;
-    async fn delete_figure_by_id(&self, transaction: Option<&mut MyTransaction>, figure_id: IdType) -> Result<(), ServerError<String>>;
+    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut T>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
+    async fn update_figure(&self, transaction: Option<&mut T>, figure: Figure) -> Result<(), ServerError<String>>;
+    async fn delete_figure_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<(), ServerError<String>>;
 }
 
 #[async_trait]
 impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
-    async fn create(&self, transaction: Option<&mut MyTransaction>, mut figure: Figure) -> Result<Figure, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, mut figure: Figure) -> Result<Figure, ServerError<String>> {
         let query =
             sqlx::query(r#"
             INSERT INTO figures (id, title, description, width, height, url, profile_id)
@@ -56,7 +55,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 
-    async fn find_by_id(&self, transaction: Option<&mut MyTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
+    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
         let query =
             sqlx::query_as(r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
@@ -73,7 +72,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
         }.map_err(|e| ServerError::InternalError(e.to_string()))
     }
 
-    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut MyTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>> {
+    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>> {
         let mut query = r#"
             SELECT figures.id AS figure_id, figures.title, figures.description, figures.url, figures.width, figures.height,
             profiles.id AS profile_id, profiles.username, profiles.display_name, profiles.bio, profiles.banner, profiles.profile_picture, profiles.user_id
@@ -138,7 +137,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
     //     }.map_err(|e| ServerError::InternalError(e.to_string()))
     // }
 
-    async fn update_figure(&self, transaction: Option<&mut MyTransaction>, figure: Figure) -> Result<(), ServerError<String>> {
+    async fn update_figure(&self, transaction: Option<&mut PostgresTransaction>, figure: Figure) -> Result<(), ServerError<String>> {
         let query =
             sqlx::query(r#"
             UPDATE figures
@@ -159,7 +158,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 
-    async fn delete_figure_by_id(&self, transaction: Option<&mut MyTransaction>, figure_id: IdType) -> Result<(), ServerError<String>> {
+    async fn delete_figure_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(), ServerError<String>> {
         let query =
             sqlx::query(r#"
             DELETE FROM figures

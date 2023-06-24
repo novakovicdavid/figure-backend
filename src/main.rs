@@ -62,10 +62,6 @@ type RepositoryContextType = RepositoryContext<
     PostgresTransactionCreator,
 >;
 
-// Transaction type used by repositories
-pub type MyTransaction = PostgresTransaction;
-pub type MyConnection = Pool<Postgres>;
-
 type ContextType = Context<
     ServiceContextType,
     RepositoryContextType>;

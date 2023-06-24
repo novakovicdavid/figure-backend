@@ -7,7 +7,7 @@ use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::figure::Figure;
 use crate::entities::types::IdType;
 use crate::repositories::figure_repository::FigureRepositoryTrait;
-use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
+use crate::repositories::transaction::TransactionTrait;
 use crate::server_errors::ServerError;
 
 #[async_trait]
