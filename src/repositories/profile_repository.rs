@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Row, Transaction};
+use sqlx::{Pool, Postgres, Row};
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};

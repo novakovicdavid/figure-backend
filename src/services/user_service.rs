@@ -12,6 +12,7 @@ use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::profile::Profile;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
+use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
 use crate::repositories::user_repository::UserRepositoryTrait;
 
@@ -23,23 +24,32 @@ lazy_static! {
 
 #[async_trait]
 pub trait UserServiceTrait: Send + Sync {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>>;
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, String), ServerError<String>>;
     async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
 }
 
 #[derive(Clone)]
-pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> {
+pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> {
     user_repository: U,
     profile_repository: P,
+    session_repository: S,
     transaction_creator: TC,
     marker: PhantomData<T>,
 }
 
-impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> UserService<TC, T, U, P> {
-    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P) -> Self {
+impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
+    where
+        TC: TransactionCreator<T>,
+        T: TransactionTrait,
+        U: UserRepositoryTrait<T>,
+        P: ProfileRepositoryTrait<T>,
+        S: SessionRepositoryTrait,
+{
+    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P, session_repository: S) -> Self {
         UserService {
             user_repository,
             profile_repository,
+            session_repository,
             transaction_creator,
             marker: PhantomData::default(),
         }
@@ -47,8 +57,8 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
 }
 
 #[async_trait]
-impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>> UserServiceTrait for UserService<TC, T, U, P> {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile), ServerError<String>> {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> UserServiceTrait for UserService<TC, T, U, P, S> {
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, String), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
         }
@@ -64,18 +74,22 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
 
         match self.transaction_creator.create().await {
             Ok(mut transaction) => {
-                let user_result = self.user_repository.create(Some(&mut transaction), email.to_string(), password_hash.to_string()).await;
-                if let Ok(user) = user_result {
-                    let profile_result = self.profile_repository.create(Some(&mut transaction), username, user.id).await;
-                    if let Ok(profile) = profile_result {
-                        return match transaction.commit().await {
-                            Ok(_) => Ok((user, profile)),
-                            Err(_) => Err(ServerError::TransactionFailed)
-                        };
-                    }
-                    return Err(ServerError::UsernameAlreadyTaken);
+                let user = match self.user_repository.create(Some(&mut transaction), email, password_hash).await {
+                    Ok(user) => user,
+                    Err(_) => return Err(ServerError::EmailAlreadyInUse),
+                };
+                let profile = match self.profile_repository.create(Some(&mut transaction), username, user.id).await {
+                    Ok(profile) => profile,
+                    Err(_) => return Err(ServerError::UsernameAlreadyTaken),
+                };
+                if (transaction.commit().await).is_err() {
+                    return Err(ServerError::TransactionFailed)
                 }
-                Err(ServerError::EmailAlreadyInUse)
+                let session = match self.session_repository.create(user.id, profile.id, Some(86400)).await {
+                    Ok(session) => session,
+                    Err(_) => return Err(ServerError::SessionCreationFailed),
+                };
+                Ok((user, profile, session.id))
             }
             Err(e) => Err(e)
         }

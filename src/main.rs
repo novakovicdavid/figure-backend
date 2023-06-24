@@ -49,7 +49,7 @@ use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
 
 type ServiceContextType = ServiceContext<
-    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository>,
+    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository, SessionRepository>,
     ProfileService<PostgresTransactionCreator, PostgresTransaction, ProfileRepository, S3Storage>,
     FigureService<PostgresTransaction, FigureRepository, S3Storage>
 >;
@@ -185,7 +185,7 @@ fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, conte
     let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
     let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
-    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone());
+    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone(), session_repository.clone());
     let profile_service = ProfileService::new(transaction_starter.clone(), profile_repository.clone(), content_store.clone());
     let figure_service = FigureService::new(figure_repository.clone(), content_store);
     let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);

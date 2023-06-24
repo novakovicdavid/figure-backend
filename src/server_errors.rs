@@ -27,6 +27,7 @@ pub enum ServerError<T: ToString> {
     InvalidMultipart,
     TransactionFailed,
     ImageDimensionsTooLarge,
+    SessionCreationFailed,
     InternalError(T)
 }
 
@@ -55,6 +56,7 @@ impl Display for ServerError<String> {
             ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::TransactionFailed => "transaction-failed",
             ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
+            ServerError::SessionCreationFailed => "session-creation-failed",
             ServerError::InternalError(error) => {
                 error!("Internal server error: {}", error);
                 "internal-error"
@@ -96,6 +98,7 @@ impl IntoResponse for ServerError<String> {
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::TransactionFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
+            ServerError::SessionCreationFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR
         };
         (
