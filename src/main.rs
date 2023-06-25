@@ -71,7 +71,7 @@ pub struct ServerState {
     domain: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Session {
     id: String,
     _user_id: IdType,

@@ -133,7 +133,7 @@ fn is_username_valid(username: &str) -> bool {
     USERNAME_REGEX.is_match(username) || username.graphemes(true).count() > 15
 }
 
-fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError<String>> {
+pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError<String>> {
     if with_checks {
         let password_length = password.graphemes(true).count();
         if password_length < 8 {

@@ -25,7 +25,7 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
     async fn create(&self, _transaction: Option<&mut MockTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
         let mut db = self.db.lock().unwrap();
         let profile = Profile {
-            id: 0,
+            id: db.len() as IdType,
             username,
             display_name: None,
             bio: None,

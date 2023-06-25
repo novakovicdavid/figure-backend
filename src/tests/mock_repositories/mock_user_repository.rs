@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
+use crate::entities::types::IdType;
 use crate::entities::user::User;
 use crate::repositories::user_repository::UserRepositoryTrait;
 use crate::server_errors::ServerError;
@@ -23,7 +24,7 @@ impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
     async fn create(&self, _transaction: Option<&mut MockTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
         let mut db = self.db.lock().unwrap();
         let user = User {
-            id: 0,
+            id: db.len() as IdType,
             email,
             password: password_hash,
             role: String::from("user"),

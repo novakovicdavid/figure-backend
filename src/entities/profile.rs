@@ -3,7 +3,7 @@ use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
 use crate::entities::types::IdType;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Profile {
     pub id: IdType,
     pub username: String,

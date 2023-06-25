@@ -23,7 +23,7 @@ impl MockSessionRepository {
 impl SessionRepositoryTrait for MockSessionRepository {
     async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
         let mut db = self.connection.lock().unwrap();
-        let session_id = Uuid::new_v4().to_string();
+        let session_id = db.len().to_string();
         let session = Session {
             id: session_id.clone(),
             _user_id: user_id,

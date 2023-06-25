@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use log::error;
 use sqlx::Error;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ServerError<T: ToString> {
     InvalidEmail,
     InvalidUsername,
