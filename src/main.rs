@@ -1,6 +1,3 @@
-// #![feature(async_fn_in_trait)]
-// #![feature(closure_lifetime_binder)]
-
 mod auth_layer;
 mod entities;
 mod server_errors;
@@ -10,7 +7,6 @@ mod content_store;
 mod services;
 mod repositories;
 mod context;
-mod database;
 
 use std::env;
 use std::net::SocketAddr;
