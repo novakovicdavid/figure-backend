@@ -15,6 +15,7 @@ use crate::repositories::profile_repository::ProfileRepositoryTrait;
 use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
 use crate::repositories::user_repository::UserRepositoryTrait;
+use crate::Session;
 
 
 lazy_static! {
@@ -24,8 +25,8 @@ lazy_static! {
 
 #[async_trait]
 pub trait UserServiceTrait: Send + Sync {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, String), ServerError<String>>;
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>>;
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, Session), ServerError<String>>;
+    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile, Session), ServerError<String>>;
 }
 
 #[derive(Clone)]
@@ -58,7 +59,7 @@ impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
 
 #[async_trait]
 impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> UserServiceTrait for UserService<TC, T, U, P, S> {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, String), ServerError<String>> {
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, Session), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
         }
@@ -83,38 +84,41 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
                     Err(_) => return Err(ServerError::UsernameAlreadyTaken),
                 };
                 if (transaction.commit().await).is_err() {
-                    return Err(ServerError::TransactionFailed)
+                    return Err(ServerError::TransactionFailed);
                 }
                 let session = match self.session_repository.create(user.id, profile.id, Some(86400)).await {
                     Ok(session) => session,
                     Err(_) => return Err(ServerError::SessionCreationFailed),
                 };
-                Ok((user, profile, session.id))
+                Ok((user, profile, session))
             }
             Err(e) => Err(e)
         }
     }
 
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile), ServerError<String>> {
-        if let Ok(user) = self.user_repository.get_user_by_email(None, email).await {
-            let parsed_hash = match PasswordHash::new(&user.password) {
-                Ok(hash) => hash,
-                Err(e) => {
-                    return Err(ServerError::InternalError(e.to_string()));
-                }
-            };
-            let password_verification = Argon2::default().verify_password(password.as_bytes(), &parsed_hash);
-            if password_verification.is_ok() {
-                match self.profile_repository.find_by_user_id(None, user.id).await {
-                    Ok(profile_result) => Ok((user, profile_result)),
-                    Err(e) => return Err(ServerError::InternalError(e.to_string()))
-                }
-            } else {
-                Err(ServerError::WrongPassword)
+    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile, Session), ServerError<String>> {
+        let user = match self.user_repository.get_user_by_email(None, email).await {
+            Ok(user) => user,
+            Err(_e) => return Err(ServerError::UserWithEmailNotFound),
+        };
+        let parsed_hash = match PasswordHash::new(&user.password) {
+            Ok(hash) => hash,
+            Err(e) => {
+                return Err(ServerError::InternalError(e.to_string()));
             }
-        } else {
-            Err(ServerError::UserWithEmailNotFound)
+        };
+        if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_err() {
+            return Err(ServerError::WrongPassword);
         }
+        let profile = match self.profile_repository.find_by_user_id(None, user.id).await {
+            Ok(profile) => profile,
+            Err(e) => return Err(ServerError::InternalError(e.to_string())),
+        };
+        let session = match self.session_repository.create(user.id, profile.id, Some(86400)).await {
+            Ok(session) => session,
+            Err(e) => return Err(ServerError::InternalError(e.to_string())),
+        };
+        Ok((user, profile, session))
     }
 }
 

@@ -43,8 +43,7 @@ impl From<Session> for SignInResponse {
 
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
-        Ok((user, profile)) => {
-            let session = server_state.context.repository_context.session_repository.create(user.id, profile.id, Some(86400)).await.unwrap();
+        Ok((user, profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -60,8 +59,8 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
     return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
-        Ok((_user, profile, session_id)) => {
-            let mut cookie = Cookie::new("session_id", session_id);
+        Ok((_user, profile, session)) => {
+            let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
             cookie.set_same_site(SameSite::Strict);
