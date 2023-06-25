@@ -15,8 +15,8 @@ pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cooki
             // Pass it to the extension so that handlers/extractors can access it
             req.extensions_mut().insert(SessionOption {
                 session: Some(Session {
-                    id: session_id.to_string(),
-                    _user_id: session_value.user_id,
+                    id: session_value.id,
+                    _user_id: session_value._user_id,
                     profile_id: session_value.profile_id,
                 })
             });

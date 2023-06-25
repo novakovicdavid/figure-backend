@@ -29,7 +29,7 @@ pub struct SessionValueInStore {
 #[async_trait]
 pub trait SessionRepositoryTrait: Send + Sync + Clone {
     async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
-    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<SessionValueInStore, ServerError<String>>;
+    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
     async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>>;
 }
 
@@ -72,7 +72,7 @@ impl SessionRepositoryTrait for SessionRepository {
         }
     }
 
-    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<SessionValueInStore, ServerError<String>> {
+    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
         let mut connection = self.connection.clone();
         let result: RedisResult<String> = match time_until_expiration {
             Some(time) => connection.get_ex(session_id, Expiry::EX(time)),
@@ -81,7 +81,12 @@ impl SessionRepositoryTrait for SessionRepository {
 
         match result {
             Ok(session_string) => {
-                serde_json::from_str(&session_string)
+                serde_json::from_str::<SessionValueInStore>(&session_string)
+                    .map(|value| Session {
+                        id: session_id.to_string(),
+                        _user_id: value.user_id,
+                        profile_id: value.profile_id,
+                    })
                     .map_err(|e| ServerError::InternalError(e.to_string()))
             }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
