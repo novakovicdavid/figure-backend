@@ -100,7 +100,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         let query =
             sqlx::query(r#"
             UPDATE profiles
-            SET display_name = $1, bio = $2, banner = $3, profile_picture = $4
+            SET display_name = $1, bio = $2, banner = COALESCE($3, banner), profile_picture = COALESCE($4, profile_picture)
             WHERE profiles.id = $5
             "#).bind(display_name)
                 .bind(bio)
