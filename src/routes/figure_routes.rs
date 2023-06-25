@@ -61,13 +61,13 @@ pub async fn landing_page_figures(State(server_state): State<Arc<ServerState>>) 
     }
 }
 
-// pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>>) -> Response {
-//     match server_state.database.get_total_figures_count().await {
-//         Ok(id) => id.to_string().into_response(),
-//         Err(_) => ServerError::InternalError("Failed to get figure count".to_string()).into_response()
-//     }
-// }
-//
+pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>>) -> Response {
+    match server_state.context.service_context.figure_service.get_total_figures_count().await {
+        Ok(id) => id.to_string().into_response(),
+        Err(_) => ServerError::InternalError("Failed to get figure count".to_string()).into_response()
+    }
+}
+
 pub async fn upload_figure(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, multipart: Multipart) -> Response {
     let session = match &session.session {
         Some(s) => s,
@@ -92,13 +92,13 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
     }
 }
 
-// pub async fn get_total_figures_by_profile(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
-//     match server_state.database.get_total_figures_by_profile(id).await {
-//         Ok(total) => total.to_string().into_response(),
-//         Err(_) => ServerError::InternalError(format!("Could not get total figures for {}", id)).into_response()
-//     }
-// }
-//
+pub async fn get_total_figures_by_profile(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
+    match server_state.context.service_context.figure_service.get_total_figures_by_profile(id).await {
+        Ok(total) => total.to_string().into_response(),
+        Err(_) => ServerError::InternalError(format!("Could not get total figures for {}", id)).into_response()
+    }
+}
+
 // fn figure_url_from_name(base_url: String, name: String) -> String {
 //     format!("{}{}", base_url, name)
 // }

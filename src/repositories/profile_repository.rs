@@ -24,6 +24,7 @@ pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn find_by_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn find_by_user_id(&self, transaction: Option<&mut T>, user_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn update_profile_by_id(&self, transaction: Option<&mut T>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
+    async fn get_total_profiles_count(&self, transaction: Option<&mut T>) -> Result<IdType, ServerError<String>>;
 }
 
 #[async_trait]
@@ -112,6 +113,18 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
+            .map_err(|e| ServerError::InternalError(e.to_string()))
+    }
+
+    async fn get_total_profiles_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError<String>> {
+        let query = sqlx::query(r#"
+        SELECT count(*) FROM profiles
+        "#);
+        match transaction {
+            Some(transaction) => query.fetch_one(transaction.inner()).await,
+            None => query.fetch_one(&self.db).await
+        }
+            .and_then(|row| row.try_get(0))
             .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 }

@@ -15,7 +15,8 @@ pub trait FigureServiceTrait: Send + Sync {
     async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError<String>>;
     async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
     async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError<String>>;
-    // async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
+    async fn get_total_figures_by_profile(&self, figure_id: IdType) -> Result<IdType, ServerError<String>>;
+    async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>>;
 }
 
 pub struct FigureService<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> {
@@ -61,5 +62,13 @@ impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureSe
             url,
             profile_id,
         }).await
+    }
+
+    async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError<String>> {
+        self.figure_repository.count_by_profile_id(None, profile_id).await
+    }
+
+    async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>> {
+        self.figure_repository.get_total_figures_count(None).await
     }
 }

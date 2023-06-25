@@ -13,6 +13,7 @@ use crate::server_errors::ServerError;
 pub trait ProfileServiceTrait: Send + Sync {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>>;
     async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>>;
+    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
 }
 
 pub struct ProfileService<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> {
@@ -56,5 +57,9 @@ impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> Profile
                 .map_err(|e| ServerError::InternalError(e.to_string()))?;
         }
         self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
+    }
+
+    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>> {
+        self.profile_repository.get_total_profiles_count(None).await
     }
 }

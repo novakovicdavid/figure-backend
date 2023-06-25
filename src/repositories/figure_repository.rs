@@ -27,6 +27,8 @@ pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut T>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
     async fn update_figure(&self, transaction: Option<&mut T>, figure: Figure) -> Result<(), ServerError<String>>;
     async fn delete_figure_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<(), ServerError<String>>;
+    async fn count_by_profile_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<IdType, ServerError<String>>;
+    async fn get_total_figures_count(&self, transaction: Option<&mut T>) -> Result<IdType, ServerError<String>>;
 }
 
 #[async_trait]
@@ -170,6 +172,34 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
+            .map_err(|e| ServerError::InternalError(e.to_string()))
+    }
+
+    async fn count_by_profile_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<IdType, ServerError<String>> {
+        let query =
+        sqlx::query(r#"
+        SELECT count(*) FROM figures
+        where figures.profile_id = $1
+        "#)
+            .bind(profile_id);
+        match transaction {
+            Some(transaction) => query.fetch_one(transaction.inner()).await,
+            None => query.fetch_one(&self.db).await
+        }
+            .and_then(|row| row.try_get(0))
+            .map_err(|e| ServerError::InternalError(e.to_string()))
+    }
+
+    async fn get_total_figures_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError<String>> {
+        let query =
+            sqlx::query(r#"
+        SELECT count(*) FROM figures
+        "#);
+        match transaction {
+            Some(transaction) => query.fetch_one(transaction.inner()).await,
+            None => query.fetch_one(&self.db).await
+        }
+            .and_then(|row| row.try_get(0))
             .map_err(|e| ServerError::InternalError(e.to_string()))
     }
 }

@@ -27,12 +27,12 @@ pub async fn get_profile(State(server_state): State<Arc<ServerState>>, Path(prof
     }
 }
 
-// pub async fn get_total_profiles_count(State(server_state): State<Arc<ServerState>>) -> Response {
-//     match server_state.database.get_total_profiles_count().await {
-//         Ok(id) => id.to_string().into_response(),
-//         Err(_) => ServerError::InternalError("Failed to get profile count".to_string()).into_response()
-//     }
-// }
+pub async fn get_total_profiles_count(State(server_state): State<Arc<ServerState>>) -> Response {
+    match server_state.context.service_context.profile_service.get_total_profiles_count().await {
+        Ok(id) => id.to_string().into_response(),
+        Err(_) => ServerError::InternalError("Failed to get profile count".to_string()).into_response()
+    }
+}
 
 pub async fn update_profile(State(server_state): State<Arc<ServerState>>, session: Extension<SessionOption>, multipart: Multipart) -> Response {
     let session = match &session.session {
