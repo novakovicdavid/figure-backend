@@ -68,4 +68,8 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
                 mem::replace(&mut db[position], profile);
             })
     }
+
+    async fn get_total_profiles_count(&self, transaction: Option<&mut MockTransaction>) -> Result<IdType, ServerError<String>> {
+        Ok(self.db.lock().unwrap().len() as IdType)
+    }
 }
