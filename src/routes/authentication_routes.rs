@@ -43,7 +43,7 @@ impl From<Session> for SignInResponse {
 
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
-        Ok((user, profile, session)) => {
+        Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -51,7 +51,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            ProfileDTO::from(profile).to_json().into_response()
+            profile.to_json().into_response()
         }
         Err(e) => e.into_response()
     };
@@ -59,7 +59,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
     return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
-        Ok((_user, profile, session)) => {
+        Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.id);
             cookie.set_http_only(true);
             cookie.set_secure(true);
@@ -67,7 +67,7 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            ProfileDTO::from(profile).to_json().into_response()
+            profile.to_json().into_response()
         }
         Err(e) => e.into_response()
     };

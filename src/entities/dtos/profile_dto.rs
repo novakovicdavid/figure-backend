@@ -3,7 +3,7 @@ use serde_json::json;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 pub struct ProfileDTO {
     pub id: IdType,
     pub username: String,

@@ -88,7 +88,7 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
                 "figure_id": figure.id
             }).to_string().into_response()
         }
-        Err(_) => ServerError::InternalError("Could not create Figure".to_string()).into_response()
+        Err(e) => e.into_response()
     }
 }
 

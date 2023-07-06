@@ -1,2 +1,1 @@
-#[cfg(test)]
-mod test_user_service;
+mod unit_tests;

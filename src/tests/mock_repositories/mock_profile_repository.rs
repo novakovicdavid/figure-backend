@@ -69,7 +69,7 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
             })
     }
 
-    async fn get_total_profiles_count(&self, transaction: Option<&mut MockTransaction>) -> Result<IdType, ServerError<String>> {
+    async fn get_total_profiles_count(&self, _transaction: Option<&mut MockTransaction>) -> Result<IdType, ServerError<String>> {
         Ok(self.db.lock().unwrap().len() as IdType)
     }
 }

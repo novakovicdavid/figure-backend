@@ -7,10 +7,9 @@ use argon2::password_hash::SaltString;
 use lazy_static::lazy_static;
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
-use crate::entities::user::User;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
-use crate::entities::profile::Profile;
+use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::repositories::profile_repository::ProfileRepositoryTrait;
 use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
@@ -25,8 +24,8 @@ lazy_static! {
 
 #[async_trait]
 pub trait UserServiceTrait: Send + Sync {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, Session), ServerError<String>>;
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile, Session), ServerError<String>>;
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>>;
+    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError<String>>;
 }
 
 #[derive(Clone)]
@@ -59,7 +58,7 @@ impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
 
 #[async_trait]
 impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> UserServiceTrait for UserService<TC, T, U, P, S> {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(User, Profile, Session), ServerError<String>> {
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
         }
@@ -90,13 +89,13 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
                     Ok(session) => session,
                     Err(_) => return Err(ServerError::SessionCreationFailed),
                 };
-                Ok((user, profile, session))
+                Ok((ProfileDTO::from(profile), session))
             }
             Err(e) => Err(e)
         }
     }
 
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(User, Profile, Session), ServerError<String>> {
+    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
         let user = match self.user_repository.get_user_by_email(None, email).await {
             Ok(user) => user,
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
@@ -118,7 +117,7 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
             Ok(session) => session,
             Err(e) => return Err(ServerError::InternalError(e.to_string())),
         };
-        Ok((user, profile, session))
+        Ok((ProfileDTO::from(profile), session))
     }
 }
 

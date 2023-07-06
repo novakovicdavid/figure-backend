@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
-use uuid::Uuid;
 use crate::entities::types::IdType;
-use crate::repositories::session_repository::{SessionRepositoryTrait, SessionValueInStore};
+use crate::repositories::session_repository::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
 use crate::Session;
 
@@ -21,7 +20,7 @@ impl MockSessionRepository {
 
 #[async_trait]
 impl SessionRepositoryTrait for MockSessionRepository {
-    async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
+    async fn create(&self, user_id: IdType, profile_id: IdType, _time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
         let mut db = self.connection.lock().unwrap();
         let session_id = db.len().to_string();
         let session = Session {
@@ -37,7 +36,7 @@ impl SessionRepositoryTrait for MockSessionRepository {
         })
     }
 
-    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
+    async fn find_by_id(&self, session_id: &str, _time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
         let db = self.connection.lock().unwrap();
         match db.iter().find(|session| session.id == session_id) {
             Some(session) => Ok(session.clone()),

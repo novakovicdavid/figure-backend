@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
-use crate::entities::user::{User};
+use crate::entities::user::{User, UserDef};
 use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
+use interpol::format as iformat;
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -26,10 +27,11 @@ pub trait UserRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
 #[async_trait]
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
-        let query = sqlx::query(r#"
-            INSERT INTO users (email, password, role)
+        let query_string = iformat!(r#"
+            INSERT INTO {UserDef::Table} ({UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()})
             VALUES ($1, $2, 'user')
-            RETURNING id"#)
+            RETURNING {UserDef::Id.as_str()}"#);
+        let query = sqlx::query(&query_string)
             .bind(email.to_lowercase())
             .bind(&password_hash);
         let query_result = match transaction {
@@ -55,8 +57,9 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     }
 
     async fn get_user_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError<String>> {
+        let query_string = iformat!("SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role} FROM {UserDef::Table} WHERE {UserDef::Email.as_str()} = $1");
         let query =
-            sqlx::query_as::<_, User>("SELECT id AS user_id, email, password, role FROM users WHERE email = $1")
+            sqlx::query_as::<_, User>(&query_string)
                 .bind(email);
         let query_result = match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,

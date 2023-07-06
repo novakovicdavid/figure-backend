@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
-use crate::entities::profile::Profile;
+use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::user::User;
-use crate::services::user_service::{hash_password, UserService, UserServiceTrait};
+use crate::services::user_service::{UserService, UserServiceTrait};
 use crate::Session;
 use crate::tests::mock_repositories::mock_profile_repository::MockProfileRepository;
 use crate::tests::mock_repositories::mock_session_repository::MockSessionRepository;
@@ -21,26 +21,24 @@ pub async fn test_signup_user_happy_flow() {
     let user_service = UserService::new(mock_trans_creator, user_repository, profile_repository, session_repository);
 
     let result = user_service.signup_user("test@test.test".to_string(), "test1234".to_string(), "test".to_string()).await;
-    let (user, profile, session) = result.unwrap();
+    let (profile, session) = result.unwrap();
+    let saved_user = users.lock().unwrap().get(0).unwrap().clone();
+    let expected_password = saved_user.password.clone();
     let expected_user = User {
         id: 0,
         email: "test@test.test".to_string(),
-        password: user.clone().password, // Can't generate the same hash again due to salting
+        password: expected_password, // Can't generate the same hash again due to salting
         role: "user".to_string(),
     };
-    let expected_profile = Profile {
+    let expected_profile = ProfileDTO {
         id: 0,
         username: "test".to_string(),
         display_name: None,
-        bio: None,
-        banner: None,
-        profile_picture: None,
-        user_id: 0,
     };
     let expected_session = Session {
         id: "0".to_string(),
         _user_id: 0,
         profile_id: 0,
     };
-    assert_eq!((expected_user, expected_profile, expected_session), (user, profile, session));
+    assert_eq!((expected_user, expected_profile, expected_session), (saved_user, profile, session));
 }

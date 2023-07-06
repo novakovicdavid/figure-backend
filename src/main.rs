@@ -86,13 +86,13 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     info!("Connecting to database...");
-    let db_pool_future = Pool::<Postgres>::connect(database_url.as_str())
-        .then(|result| async {
-            result.map(|pool| {
+    let db_pool_future = task::spawn(async move {
+        Pool::<Postgres>::connect(&database_url).await
+            .map(|pool| {
                 info!("Connected to database...");
                 pool
             })
-        });
+    });
 
 
     let session_store_url = env::var("REDIS_URL").expect("No REDIS_URL env found");
@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     info!("Domain parsed from origin: {}", domain);
 
     info!("Waiting for stores...");
-    let db_pool = db_pool_future.await?;
+    let db_pool = db_pool_future.await??;
     let session_store = session_store_connection_future.await??;
     let server_state = create_state(db_pool, session_store, content_store, domain);
 
