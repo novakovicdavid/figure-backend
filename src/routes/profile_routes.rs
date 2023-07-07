@@ -12,8 +12,7 @@ use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::{ServerState, SessionOption};
 use crate::routes::figure_routes::parse_image_format;
-use crate::services::profile_service::ProfileServiceTrait;
-// use crate::routes::figure_routes::parse_image_format;
+use crate::services::traits::ProfileServiceTrait;
 
 pub async fn get_profile(State(server_state): State<Arc<ServerState>>, Path(profile_id): Path<IdType>) -> Response {
     let profile = server_state.context.service_context.profile_service.find_profile_by_id(profile_id).await;

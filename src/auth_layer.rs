@@ -5,7 +5,7 @@ use axum::middleware::Next;
 use axum::response::Response;
 use tower_cookies::Cookies;
 use crate::{ServerState, Session, SessionOption};
-use crate::repositories::session_repository::SessionRepositoryTrait;
+use crate::repositories::traits::SessionRepositoryTrait;
 
 pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cookies: Cookies, mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     if let Some(cookie) = cookies.get("session_id") {

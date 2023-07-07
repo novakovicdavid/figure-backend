@@ -11,7 +11,7 @@ use serde_json::json;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::{ServerState, SessionOption};
-use crate::services::figure_service::FigureServiceTrait;
+use crate::services::traits::FigureServiceTrait;
 
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
     let figure = server_state.context.service_context.figure_service.find_figure_by_id(id).await;

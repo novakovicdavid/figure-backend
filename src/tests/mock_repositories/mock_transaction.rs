@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
+use crate::repositories::traits::{TransactionCreator, TransactionTrait};
 use crate::server_errors::ServerError;
 
 pub struct MockTransactionCreator {

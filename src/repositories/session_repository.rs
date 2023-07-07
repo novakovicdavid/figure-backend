@@ -4,6 +4,7 @@ use redis::{AsyncCommands, Expiry, RedisResult};
 use crate::entities::types::IdType;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+use crate::repositories::traits::SessionRepositoryTrait;
 use crate::Session;
 use crate::server_errors::ServerError;
 
@@ -26,12 +27,7 @@ pub struct SessionValueInStore {
     pub profile_id: IdType,
 }
 
-#[async_trait]
-pub trait SessionRepositoryTrait: Send + Sync + Clone {
-    async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
-    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
-    async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>>;
-}
+
 
 #[async_trait]
 impl SessionRepositoryTrait for SessionRepository {

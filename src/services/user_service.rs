@@ -10,22 +10,14 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::dtos::profile_dto::ProfileDTO;
-use crate::repositories::profile_repository::ProfileRepositoryTrait;
-use crate::repositories::session_repository::SessionRepositoryTrait;
-use crate::repositories::transaction::{TransactionCreator, TransactionTrait};
-use crate::repositories::user_repository::UserRepositoryTrait;
+use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreator, TransactionTrait, UserRepositoryTrait};
+use crate::services::traits::UserServiceTrait;
 use crate::Session;
 
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex = Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();
     static ref USERNAME_REGEX: Regex = Regex::new("^[a-zA-Z0-9]+-*[a-zA-Z0-9]+?$").unwrap();
-}
-
-#[async_trait]
-pub trait UserServiceTrait: Send + Sync {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>>;
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError<String>>;
 }
 
 #[derive(Clone)]

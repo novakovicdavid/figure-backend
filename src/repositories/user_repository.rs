@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
 use crate::entities::user::{User, UserDef};
-use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
 use interpol::format as iformat;
+use crate::repositories::traits::{TransactionTrait, UserRepositoryTrait};
+use crate::repositories::transaction::PostgresTransaction;
 
 #[derive(Clone)]
 pub struct UserRepository {
@@ -18,11 +19,7 @@ impl UserRepository {
     }
 }
 
-#[async_trait]
-pub trait UserRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
-    async fn create(&self, transaction: Option<&mut T>, email: String, password_hash: String) -> Result<User, ServerError<String>>;
-    async fn get_user_by_email(&self, transaction: Option<&mut T>, email: String) -> Result<User, ServerError<String>>;
-}
+
 
 #[async_trait]
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {

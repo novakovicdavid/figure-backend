@@ -2,9 +2,10 @@ use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
 use crate::entities::profile::{Profile, ProfileDef};
 use crate::entities::types::IdType;
-use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use crate::server_errors::ServerError;
 use interpol::format as iformat;
+use crate::repositories::traits::{ProfileRepositoryTrait, TransactionTrait};
+use crate::repositories::transaction::PostgresTransaction;
 
 #[derive(Clone)]
 pub struct ProfileRepository {
@@ -19,14 +20,7 @@ impl ProfileRepository {
     }
 }
 
-#[async_trait]
-pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
-    async fn create(&self, transaction: Option<&mut T>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn find_by_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn find_by_user_id(&self, transaction: Option<&mut T>, user_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn update_profile_by_id(&self, transaction: Option<&mut T>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>>;
-    async fn get_total_profiles_count(&self, transaction: Option<&mut T>) -> Result<IdType, ServerError<String>>;
-}
+
 
 #[async_trait]
 impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {

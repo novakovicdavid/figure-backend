@@ -5,8 +5,9 @@ use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::figure::{Figure, FigureDef};
 use crate::entities::profile::ProfileDef;
 use crate::entities::types::IdType;
-use crate::repositories::transaction::{PostgresTransaction, TransactionTrait};
 use interpol::format as iformat;
+use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
+use crate::repositories::transaction::PostgresTransaction;
 
 #[derive(Clone)]
 pub struct FigureRepository {
@@ -19,17 +20,6 @@ impl FigureRepository {
             db: pool
         }
     }
-}
-
-#[async_trait]
-pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
-    async fn create(&self, transaction: Option<&mut T>, figure: Figure) -> Result<Figure, ServerError<String>>;
-    async fn find_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>>;
-    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut T>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>>;
-    async fn update_figure(&self, transaction: Option<&mut T>, figure: Figure) -> Result<(), ServerError<String>>;
-    async fn delete_figure_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<(), ServerError<String>>;
-    async fn count_by_profile_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<IdType, ServerError<String>>;
-    async fn get_total_figures_count(&self, transaction: Option<&mut T>) -> Result<IdType, ServerError<String>>;
 }
 
 #[async_trait]

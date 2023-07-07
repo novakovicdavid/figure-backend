@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 use crate::entities::types::IdType;
-use crate::repositories::session_repository::SessionRepositoryTrait;
+use crate::repositories::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
 use crate::Session;
 

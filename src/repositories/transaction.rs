@@ -1,11 +1,9 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Transaction};
+use crate::repositories::traits::{TransactionCreator, TransactionTrait};
 use crate::server_errors::ServerError;
 
-#[async_trait]
-pub trait TransactionCreator<T: TransactionTrait>: Send + Sync {
-    async fn create(&self) -> Result<T, ServerError<String>>;
-}
+
 
 #[derive(Clone)]
 pub struct PostgresTransactionCreator {
@@ -29,12 +27,7 @@ impl TransactionCreator<PostgresTransaction> for PostgresTransactionCreator {
     }
 }
 
-#[async_trait]
-pub trait TransactionTrait: Send + Sync {
-    type Inner;
-    async fn commit(self) -> Result<(), ServerError<String>>;
-    fn inner(&mut self) -> &mut Self::Inner;
-}
+
 
 pub struct PostgresTransaction {
     transaction: Transaction<'static, Postgres>

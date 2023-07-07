@@ -10,10 +10,9 @@ use tower_cookies::Cookies;
 use crate::{ServerState, Session, SessionOption};
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::types::IdType;
-use crate::repositories::session_repository::SessionRepositoryTrait;
+use crate::repositories::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
-use crate::services::profile_service::ProfileServiceTrait;
-use crate::services::user_service::UserServiceTrait;
+use crate::services::traits::{ProfileServiceTrait, UserServiceTrait};
 
 #[derive(Deserialize)]
 pub struct SignUpForm {

@@ -98,7 +98,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let session_store_url = env::var("REDIS_URL").expect("No REDIS_URL env found");
     info!("Connecting to session store...");
     let client = redis::Client::open(session_store_url)?;
-    let session_store_connection_future = task::spawn(ConnectionManager::new(client)
+    let session_store_connection_future = task::spawn(client.get_async_connection()
         .then(|session_store| async {
             info!("Connected to session store...");
             session_store

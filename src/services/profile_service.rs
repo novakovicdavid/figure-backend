@@ -5,16 +5,9 @@ use uuid::Uuid;
 use crate::content_store::ContentStore;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
-use crate::repositories::profile_repository::ProfileRepositoryTrait;
-use crate::repositories::transaction::TransactionTrait;
+use crate::repositories::traits::{ProfileRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
-
-#[async_trait]
-pub trait ProfileServiceTrait: Send + Sync {
-    async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>>;
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>>;
-    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>>;
-}
+use crate::services::traits::ProfileServiceTrait;
 
 pub struct ProfileService<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> {
     profile_repository: P,
