@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::user::User;
-use crate::services::user_service::{UserService, UserServiceTrait};
+use crate::services::traits::UserServiceTrait;
+use crate::services::user_service::UserService;
 use crate::Session;
 use crate::tests::mock_repositories::mock_profile_repository::MockProfileRepository;
 use crate::tests::mock_repositories::mock_session_repository::MockSessionRepository;
