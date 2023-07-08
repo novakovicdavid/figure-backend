@@ -9,10 +9,11 @@ use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
+use uuid::Uuid;
 use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreator, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
-use crate::Session;
 
 
 lazy_static! {
@@ -77,7 +78,15 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
                 if (transaction.commit().await).is_err() {
                     return Err(ServerError::TransactionFailed);
                 }
-                let session = match self.session_repository.create(user.id, profile.id, Some(86400)).await {
+
+                let session = Session::new(
+                    Uuid::new_v4().to_string(),
+                    user.id,
+                    profile.id,
+                    Some(86400)
+                );
+
+                let session = match self.session_repository.create(session).await {
                     Ok(session) => session,
                     Err(_) => return Err(ServerError::SessionCreationFailed),
                 };
@@ -105,7 +114,8 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
             Ok(profile) => profile,
             Err(e) => return Err(ServerError::InternalError(e.to_string())),
         };
-        let session = match self.session_repository.create(user.id, profile.id, Some(86400)).await {
+
+        let session = match self.session_repository.create(Session::new(Uuid::new_v4().to_string(), user.id, profile.id, Some(86400))).await {
             Ok(session) => session,
             Err(e) => return Err(ServerError::InternalError(e.to_string())),
         };

@@ -8,9 +8,10 @@ use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use image::GenericImageView;
 use serde_json::json;
+use crate::entities::dtos::session_dtos::SessionOption;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
-use crate::{ServerState, SessionOption};
+use crate::ServerState;
 use crate::services::traits::FigureServiceTrait;
 
 pub async fn get_figure(State(server_state): State<Arc<ServerState>>, Path(id): Path<IdType>) -> Response {
@@ -69,7 +70,7 @@ pub async fn get_total_figures_count(State(server_state): State<Arc<ServerState>
 }
 
 pub async fn upload_figure(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, multipart: Multipart) -> Response {
-    let session = match &session.session {
+    let session = match &session.session_opt {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
     };
@@ -82,7 +83,7 @@ pub async fn upload_figure(session: Extension<SessionOption>, State(server_state
         }
     };
 
-    match server_state.context.service_context.figure_service.create(title, description, image, width, height, session.profile_id).await {
+    match server_state.context.service_context.figure_service.create(title, description, image, width, height, session.get_profile_id()).await {
         Ok(figure) => {
             json!({
                 "figure_id": figure.id

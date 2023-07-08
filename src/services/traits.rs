@@ -1,13 +1,12 @@
-use std::marker::PhantomData;
 use async_trait::async_trait;
 use bytes::Bytes;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::session_dtos::Session;
 use crate::entities::figure::Figure;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
-use crate::Session;
 
 #[async_trait]
 pub trait UserServiceTrait: Send + Sync {

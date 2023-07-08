@@ -7,8 +7,9 @@ use cookie::{Cookie, SameSite};
 use serde::Serialize;
 use serde::Deserialize;
 use tower_cookies::Cookies;
-use crate::{ServerState, Session, SessionOption};
+use crate::ServerState;
 use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::session_dtos::{Session, SessionOption};
 use crate::entities::types::IdType;
 use crate::repositories::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
@@ -35,7 +36,7 @@ struct SignInResponse {
 impl From<Session> for SignInResponse {
     fn from(session: Session) -> Self {
         SignInResponse {
-            profile_id: session.profile_id,
+            profile_id: session.get_profile_id(),
         }
     }
 }
@@ -43,7 +44,7 @@ impl From<Session> for SignInResponse {
 pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
         Ok((profile, session)) => {
-            let mut cookie = Cookie::new("session_id", session.id);
+            let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
             cookie.set_secure(true);
             cookie.set_same_site(SameSite::Strict);
@@ -59,7 +60,7 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
 pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
     return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
         Ok((profile, session)) => {
-            let mut cookie = Cookie::new("session_id", session.id);
+            let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
             cookie.set_secure(true);
             cookie.set_same_site(SameSite::Strict);
@@ -97,7 +98,7 @@ pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies:
     if let Some(cookie) = cookies.get("session_id") {
         match server_state.context.repository_context.session_repository.find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.profile_id).await {
+                if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.get_profile_id()).await {
                     return ProfileDTO::from(profile).to_json().into_response();
                 }
                 ServerError::ResourceNotFound.into_response()

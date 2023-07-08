@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use crate::entities::dtos::figure_dto::FigureDTO;
+use crate::entities::dtos::session_dtos::Session;
 use crate::entities::figure::Figure;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::entities::user::User;
 use crate::server_errors::ServerError;
-use crate::Session;
 
 #[async_trait]
 pub trait TransactionCreator<T: TransactionTrait>: Send + Sync {
@@ -47,7 +47,7 @@ pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
 
 #[async_trait]
 pub trait SessionRepositoryTrait: Send + Sync + Clone {
-    async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
+    async fn create(&self, session: Session) -> Result<Session, ServerError<String>>;
     async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>>;
     async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>>;
 }

@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 use crate::entities::dtos::profile_dto::ProfileDTO;
+use crate::entities::dtos::session_dtos::Session;
 use crate::entities::user::User;
 use crate::services::traits::UserServiceTrait;
 use crate::services::user_service::UserService;
-use crate::Session;
 use crate::tests::mock_repositories::mock_profile_repository::MockProfileRepository;
 use crate::tests::mock_repositories::mock_session_repository::MockSessionRepository;
 use crate::tests::mock_repositories::mock_transaction::MockTransactionCreator;
@@ -36,10 +36,11 @@ pub async fn test_signup_user_happy_flow() {
         username: "test".to_string(),
         display_name: None,
     };
-    let expected_session = Session {
-        id: "0".to_string(),
-        _user_id: 0,
-        profile_id: 0,
-    };
+    let expected_session = Session::new(
+        session.get_id(),
+        0,
+        0,
+        session.get_time_until_expiration(),
+    );
     assert_eq!((expected_user, expected_profile, expected_session), (saved_user, profile, session));
 }

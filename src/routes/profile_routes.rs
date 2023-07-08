@@ -8,9 +8,10 @@ use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use serde_json::json;
 use crate::entities::dtos::profile_dto::ProfileWithoutUserIdDTO;
+use crate::entities::dtos::session_dtos::SessionOption;
 use crate::entities::types::IdType;
 use crate::server_errors::ServerError;
-use crate::{ServerState, SessionOption};
+use crate::ServerState;
 use crate::routes::figure_routes::parse_image_format;
 use crate::services::traits::ProfileServiceTrait;
 
@@ -34,7 +35,7 @@ pub async fn get_total_profiles_count(State(server_state): State<Arc<ServerState
 }
 
 pub async fn update_profile(State(server_state): State<Arc<ServerState>>, session: Extension<SessionOption>, multipart: Multipart) -> Response {
-    let session = match &session.session {
+    let session = match &session.session_opt {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
     };
@@ -46,7 +47,7 @@ pub async fn update_profile(State(server_state): State<Arc<ServerState>>, sessio
     };
 
     match server_state.context.service_context.profile_service
-        .update_profile_by_id(session.profile_id, display_name, bio, banner, profile_picture).await {
+        .update_profile_by_id(session.get_profile_id(), display_name, bio, banner, profile_picture).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(e) => e.into_response()
     }

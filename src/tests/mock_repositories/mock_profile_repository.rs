@@ -1,4 +1,3 @@
-use std::mem;
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 use crate::entities::profile::Profile;
@@ -65,7 +64,7 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
                 profile.bio = bio;
                 profile.banner = banner;
                 profile.profile_picture = profile_picture;
-                mem::replace(&mut db[position], profile);
+                db[position] = profile;
             })
     }
 

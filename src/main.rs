@@ -30,7 +30,7 @@ use url::Url;
 use crate::auth_layer::authenticate;
 use crate::content_store::S3Storage;
 use crate::context::{Context, RepositoryContext, ServiceContext};
-use crate::entities::types::IdType;
+use crate::entities::dtos::session_dtos::SessionOption;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
@@ -65,18 +65,6 @@ type ContextType = Context<
 pub struct ServerState {
     context: ContextType,
     domain: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Session {
-    id: String,
-    _user_id: IdType,
-    profile_id: IdType,
-}
-
-#[derive(Clone, Debug)]
-pub struct SessionOption {
-    session: Option<Session>,
 }
 
 #[tokio::main]
@@ -197,7 +185,7 @@ fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, conte
 
 fn create_authentication_extension() -> SessionOption {
     SessionOption {
-        session: None
+        session_opt: None
     }
 }
 

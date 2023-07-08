@@ -3,9 +3,8 @@ use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Expiry, RedisResult};
 use crate::entities::types::IdType;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
+use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::SessionRepositoryTrait;
-use crate::Session;
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]
@@ -31,13 +30,12 @@ pub struct SessionValueInStore {
 
 #[async_trait]
 impl SessionRepositoryTrait for SessionRepository {
-    async fn create(&self, user_id: IdType, profile_id: IdType, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
-        let session_id = Uuid::new_v4().to_string();
-        let session = SessionValueInStore {
-            user_id,
-            profile_id,
+    async fn create(&self, session: Session) -> Result<Session, ServerError<String>> {
+        let session_in_store = SessionValueInStore {
+            user_id: session.get_user_id(),
+            profile_id: session.get_profile_id(),
         };
-        let session_value_json = match serde_json::to_string(&session) {
+        let session_value_json = match serde_json::to_string(&session_in_store) {
             Ok(json) => json,
             Err(e) => {
                 return Err(ServerError::InternalError(e.to_string()));
@@ -45,25 +43,21 @@ impl SessionRepositoryTrait for SessionRepository {
         };
 
         let mut connection = self.connection.clone();
-        let result = match time_until_expiration {
+        let result = match session.get_time_until_expiration() {
             Some(time) => connection.set_ex(
-                session_id.clone(),
+                session.get_id(),
                 session_value_json,
                 time),
             None => {
                 connection.set(
-                    session_id.clone(),
+                    session.get_id(),
                     session_value_json,
                 )
             }
         }.await;
 
         match result {
-            Ok(()) => Ok(Session {
-                id: session_id.to_string(),
-                _user_id: user_id,
-                profile_id,
-            }),
+            Ok(()) => Ok(session),
             Err(e) => Err(ServerError::InternalError(e.to_string()))
         }
     }
@@ -78,11 +72,12 @@ impl SessionRepositoryTrait for SessionRepository {
         match result {
             Ok(session_string) => {
                 serde_json::from_str::<SessionValueInStore>(&session_string)
-                    .map(|value| Session {
-                        id: session_id.to_string(),
-                        _user_id: value.user_id,
-                        profile_id: value.profile_id,
-                    })
+                    .map(|value| Session::new(
+                        session_id.to_string(),
+                        value.user_id,
+                        value.profile_id,
+                        None,
+                    ))
                     .map_err(|e| ServerError::InternalError(e.to_string()))
             }
             Err(e) => Err(ServerError::InternalError(e.to_string()))
