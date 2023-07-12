@@ -4,7 +4,7 @@ use crate::entities::types::IdType;
 use crate::entities::user::User;
 use crate::repositories::traits::UserRepositoryTrait;
 use crate::server_errors::ServerError;
-use crate::tests::mock_repositories::mock_transaction::MockTransaction;
+use crate::tests::mocks::repositories::mock_transaction::MockTransaction;
 
 #[derive(Clone)]
 pub struct MockUserRepository {
@@ -12,9 +12,9 @@ pub struct MockUserRepository {
 }
 
 impl MockUserRepository {
-    pub fn new(users: Arc<Mutex<Vec<User>>>) -> Self {
+    pub fn new() -> Self {
         MockUserRepository {
-            db: users
+            db: Arc::new(Mutex::new(Vec::new()))
         }
     }
 }
@@ -33,10 +33,17 @@ impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
         Ok(user)
     }
 
-    async fn get_user_by_email(&self, _transaction: Option<&mut MockTransaction>, email: String) -> Result<User, ServerError<String>> {
+    async fn find_one_by_email(&self, _transaction: Option<&mut MockTransaction>, email: String) -> Result<User, ServerError<String>> {
         let db = self.db.lock().unwrap();
         db.iter().find(|user| user.email == email)
             .cloned()
             .ok_or_else(|| ServerError::InternalError(String::from("No user found with email")))
+    }
+
+    async fn find_one_by_id(&self, _transaction: Option<&mut MockTransaction>, id: IdType) -> Result<User, ServerError<String>> {
+        let db = self.db.lock().unwrap();
+        db.iter().find(|user| user.id == id)
+            .cloned()
+            .ok_or_else(|| ServerError::InternalError(String::from("No user found with id")))
     }
 }

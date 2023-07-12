@@ -3,6 +3,7 @@ use sqlx::{Pool, Postgres, Row};
 use crate::entities::user::{User, UserDef};
 use crate::server_errors::ServerError;
 use interpol::format as iformat;
+use crate::entities::types::IdType;
 use crate::repositories::traits::{TransactionTrait, UserRepositoryTrait};
 use crate::repositories::transaction::PostgresTransaction;
 
@@ -53,11 +54,25 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
         }
     }
 
-    async fn get_user_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError<String>> {
+    async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError<String>> {
         let query_string = iformat!("SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role} FROM {UserDef::Table} WHERE {UserDef::Email.as_str()} = $1");
         let query =
             sqlx::query_as::<_, User>(&query_string)
                 .bind(email);
+        let query_result = match transaction {
+            Some(transaction) => query.fetch_one(transaction.inner()).await,
+            None => query.fetch_one(&self.db).await
+        };
+        query_result.map_err(|_e| {
+            ServerError::ResourceNotFound
+        })
+    }
+
+    async fn find_one_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError<String>> {
+        let query_string = iformat!("SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role} FROM {UserDef::Table} WHERE {UserDef::Id.as_str()} = $1");
+        let query =
+            sqlx::query_as::<_, User>(&query_string)
+                .bind(id);
         let query_result = match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await

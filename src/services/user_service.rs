@@ -97,7 +97,7 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
     }
 
     async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
-        let user = match self.user_repository.get_user_by_email(None, email).await {
+        let user = match self.user_repository.find_one_by_email(None, email).await {
             Ok(user) => user,
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
         };
@@ -125,13 +125,15 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
 
 // Valid email test (OWASP Regex + maximum length of 60 graphemes
 fn is_email_valid(email: &str) -> bool {
-    EMAIL_REGEX.is_match(email) || email.graphemes(true).count() > 60
+    let email_count = email.graphemes(true).count();
+    EMAIL_REGEX.is_match(email) && (3..=60).contains(&email_count)
 }
 
 // Valid username test
 // (alphanumerical, optionally a dash surrounded by alphanumerical characters, 15 character limit)
 fn is_username_valid(username: &str) -> bool {
-    USERNAME_REGEX.is_match(username) || username.graphemes(true).count() > 15
+    let username_count = username.graphemes(true).count();
+    USERNAME_REGEX.is_match(username) && (3..=15).contains(&username_count)
 }
 
 pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError<String>> {

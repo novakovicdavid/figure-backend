@@ -4,7 +4,7 @@ use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::traits::ProfileRepositoryTrait;
 use crate::server_errors::ServerError;
-use crate::tests::mock_repositories::mock_transaction::MockTransaction;
+use crate::tests::mocks::repositories::mock_transaction::MockTransaction;
 
 #[derive(Clone)]
 pub struct MockProfileRepository {
@@ -12,9 +12,9 @@ pub struct MockProfileRepository {
 }
 
 impl MockProfileRepository {
-    pub fn new(users: Arc<Mutex<Vec<Profile>>>) -> Self {
+    pub fn new() -> Self {
         MockProfileRepository {
-            db: users
+            db: Arc::new(Mutex::new(Vec::new()))
         }
     }
 }
