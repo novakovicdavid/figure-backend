@@ -44,8 +44,26 @@ use crate::services::figure_service::FigureService;
 use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
 
+type ServiceContextType = ServiceContext<
+    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository, SessionRepository>,
+    ProfileService<PostgresTransaction, ProfileRepository, S3Storage>,
+    FigureService<PostgresTransaction, FigureRepository, S3Storage>
+>;
+
+type RepositoryContextType = RepositoryContext<
+    UserRepository,
+    ProfileRepository,
+    FigureRepository,
+    SessionRepository,
+    PostgresTransactionCreator,
+>;
+
+type ContextType = Context<
+    ServiceContextType,
+    RepositoryContextType>;
+
 pub struct ServerState {
-    context: Context<PostgresTransaction>,
+    context: ContextType,
     domain: String,
 }
 
@@ -146,24 +164,16 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
 }
 
 fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState> {
-    // Repositories
     let user_repository = UserRepository::new(db_pool.clone());
     let profile_repository = ProfileRepository::new(db_pool.clone());
     let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
-
-    // Transaction creator
     let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
-
-    // Services
-    let user_service = UserService::new(Box::new(transaction_starter.clone()), Box::new(user_repository.clone()), Box::new(profile_repository.clone()), Box::new(session_repository.clone()));
-    let profile_service = ProfileService::new(Box::new(profile_repository.clone()), Box::new(content_store.clone()));
-    let figure_service = FigureService::new(Box::new(figure_repository.clone()), Box::new(content_store));
-
-    // Contexts that combine repositories and services
-    let repository_context = RepositoryContext::new(Box::new(user_repository), Box::new(profile_repository), Box::new(figure_repository), Box::new(session_repository), Box::new(transaction_starter));
-    let service_context = ServiceContext::new(Box::new(user_service), Box::new(profile_service), Box::new(figure_service));
-
+    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone(), session_repository.clone());
+    let profile_service = ProfileService::new(profile_repository.clone(), content_store.clone());
+    let figure_service = FigureService::new(figure_repository.clone(), content_store);
+    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);
+    let service_context = ServiceContext::new(user_service, profile_service, figure_service);
     let context = Context::new(service_context, repository_context);
 
     Arc::new(ServerState {

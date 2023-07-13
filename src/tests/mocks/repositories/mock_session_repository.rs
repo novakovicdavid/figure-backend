@@ -10,10 +10,10 @@ pub struct MockSessionRepository {
 }
 
 impl MockSessionRepository {
-    pub fn new() -> Box<Self> {
-        Box::new(MockSessionRepository {
+    pub fn new() -> Self {
+        MockSessionRepository {
             connection: Arc::new(Mutex::new(Vec::new()))
-        })
+        }
     }
 }
 

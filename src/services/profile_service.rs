@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
@@ -8,22 +9,24 @@ use crate::repositories::traits::{ProfileRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::ProfileServiceTrait;
 
-pub struct ProfileService<T: TransactionTrait> {
-    profile_repository: Box<dyn ProfileRepositoryTrait<T>>,
-    storage: Box<dyn ContentStore>,
+pub struct ProfileService<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> {
+    profile_repository: P,
+    storage: S,
+    marker: PhantomData<T>,
 }
 
-impl<T: TransactionTrait> ProfileService<T> {
-    pub fn new(profile_repository: Box<dyn ProfileRepositoryTrait<T>>, storage: Box<dyn ContentStore>) -> Self {
+impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> ProfileService<T, P, S> {
+    pub fn new(profile_repository: P, storage: S) -> Self {
         Self {
             profile_repository,
             storage,
+            marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<T: TransactionTrait> ProfileServiceTrait for ProfileService<T> {
+impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> ProfileServiceTrait for ProfileService<T, P, S> {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>> {
         self.profile_repository.find_by_id(None, profile_id).await
     }

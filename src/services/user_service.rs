@@ -21,26 +21,36 @@ lazy_static! {
     static ref USERNAME_REGEX: Regex = Regex::new("^[a-zA-Z0-9]+-*[a-zA-Z0-9]+?$").unwrap();
 }
 
-pub struct UserService<T: TransactionTrait> {
-    user_repository: Box<dyn UserRepositoryTrait<T>>,
-    profile_repository: Box<dyn ProfileRepositoryTrait<T>>,
-    session_repository: Box<dyn SessionRepositoryTrait>,
-    transaction_creator: Box<dyn TransactionCreator<T>>,
+#[derive(Clone)]
+pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> {
+    user_repository: U,
+    profile_repository: P,
+    session_repository: S,
+    transaction_creator: TC,
+    marker: PhantomData<T>,
 }
 
-impl<T: TransactionTrait> UserService<T> {
-    pub fn new(transaction_creator: Box<dyn TransactionCreator<T>>, user_repository: Box<dyn UserRepositoryTrait<T>>, profile_repository: Box<dyn ProfileRepositoryTrait<T>>, session_repository: Box<dyn SessionRepositoryTrait>) -> Self {
+impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
+    where
+        TC: TransactionCreator<T>,
+        T: TransactionTrait,
+        U: UserRepositoryTrait<T>,
+        P: ProfileRepositoryTrait<T>,
+        S: SessionRepositoryTrait,
+{
+    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P, session_repository: S) -> Self {
         UserService {
             user_repository,
             profile_repository,
             session_repository,
             transaction_creator,
+            marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<T: TransactionTrait> UserServiceTrait for UserService<T> {
+impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> UserServiceTrait for UserService<TC, T, U, P, S> {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);

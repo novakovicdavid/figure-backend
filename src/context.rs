@@ -1,13 +1,23 @@
-use crate::repositories::traits::{FigureRepositoryTrait, ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreator, TransactionTrait, UserRepositoryTrait};
-use crate::services::traits::{FigureServiceTrait, ProfileServiceTrait, UserServiceTrait};
-
-pub struct Context<T: TransactionTrait> {
-    pub service_context: ServiceContext,
-    pub repository_context: RepositoryContext<T>,
+pub trait ContextTrait<SC, RC> {
+    type Context;
+    fn get_context(&self) -> &Self::Context;
 }
 
-impl<T: TransactionTrait> Context<T> {
-    pub fn new(service_context: ServiceContext, repository_context: RepositoryContext<T>) -> Context<T> {
+impl<SC, RC> ContextTrait<SC, RC> for Context<SC, RC> {
+    type Context = Context<SC, RC>;
+
+    fn get_context(&self) -> &Self::Context {
+        self
+    }
+}
+
+pub struct Context<SC, RC> {
+    pub service_context: SC,
+    pub repository_context: RC,
+}
+
+impl<SC, RC> Context<SC, RC> {
+    pub fn new(service_context: SC, repository_context: RC) -> Context<SC, RC> {
         Context {
             service_context,
             repository_context,
@@ -15,15 +25,15 @@ impl<T: TransactionTrait> Context<T> {
     }
 }
 
-pub struct ServiceContext {
-    pub user_service: Box<dyn UserServiceTrait>,
-    pub profile_service: Box<dyn ProfileServiceTrait>,
-    pub figure_service: Box<dyn FigureServiceTrait>,
+pub struct ServiceContext<US, PS, FS> {
+    pub user_service: US,
+    pub profile_service: PS,
+    pub figure_service: FS,
 }
 
-impl ServiceContext {
-    pub fn new(user_service: Box<dyn UserServiceTrait>, profile_service: Box<dyn ProfileServiceTrait>, figure_service: Box<dyn FigureServiceTrait>)
-               -> ServiceContext {
+impl<US, PS, FS> ServiceContext<US, PS, FS> {
+    pub fn new(user_service: US, profile_service: PS, figure_service: FS)
+               -> ServiceContext<US, PS, FS> {
         ServiceContext {
             user_service,
             profile_service,
@@ -32,28 +42,53 @@ impl ServiceContext {
     }
 }
 
-pub struct RepositoryContext<T: TransactionTrait> {
-    user_repository: Box<dyn UserRepositoryTrait<T>>,
-    profile_repository: Box<dyn ProfileRepositoryTrait<T>>,
-    figure_repository: Box<dyn FigureRepositoryTrait<T>>,
-    pub session_repository: Box<dyn SessionRepositoryTrait>,
-    transaction_starter: Box<dyn TransactionCreator<T>>,
+pub trait ServiceContextTrait<US, PS, FS> {
+    type ServiceContext;
+    fn get_service_context(&self) -> &Self::ServiceContext;
 }
 
-impl<T: TransactionTrait> RepositoryContext<T> {
-    pub fn new(user_repository: Box<dyn UserRepositoryTrait<T>>,
-               profile_repository: Box<dyn ProfileRepositoryTrait<T>>,
-               figure_repository: Box<dyn FigureRepositoryTrait<T>>,
-               session_repository: Box<dyn SessionRepositoryTrait>,
-               transaction_starter: Box<dyn TransactionCreator<T>>)
-               -> RepositoryContext<T>
-    {
+impl<US, PS, FS> ServiceContextTrait<US, PS, FS> for ServiceContext<US, PS, FS> {
+    type ServiceContext = ServiceContext<US, PS, FS>;
+
+    fn get_service_context(&self) -> &Self::ServiceContext {
+        self
+    }
+}
+
+pub struct RepositoryContext<UR, PR, FR, SR, TS> {
+    user_repository: UR,
+    profile_repository: PR,
+    figure_repository: FR,
+    pub session_repository: SR,
+    transaction_starter: TS,
+}
+
+impl<UR, PR, FR, SR, TS> RepositoryContext<UR, PR, FR, SR, TS> {
+    pub fn new(
+        user_repository: UR,
+        profile_repository: PR,
+        figure_repository: FR,
+        session_repository: SR,
+        transaction_starter: TS, ) -> RepositoryContext<UR, PR, FR, SR, TS> {
         RepositoryContext {
             user_repository,
             profile_repository,
             figure_repository,
             session_repository,
-            transaction_starter,
+            transaction_starter
         }
+    }
+}
+
+pub trait RepositoryContextTrait {
+    type RepositoryContext;
+    fn get_repository_context(&self) -> &Self::RepositoryContext;
+}
+
+impl<UR, PR, FR, SR, TS> RepositoryContextTrait for RepositoryContext<UR, PR, FR, SR, TS> {
+    type RepositoryContext = RepositoryContext<UR, PR, FR, SR, TS>;
+
+    fn get_repository_context(&self) -> &Self::RepositoryContext {
+        self
     }
 }

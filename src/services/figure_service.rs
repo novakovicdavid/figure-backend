@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
@@ -9,22 +10,24 @@ use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::FigureServiceTrait;
 
-pub struct FigureService<T: TransactionTrait> {
-    figure_repository: Box<dyn FigureRepositoryTrait<T>>,
-    storage: Box<dyn ContentStore>,
+pub struct FigureService<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> {
+    figure_repository: F,
+    storage: S,
+    marker: PhantomData<T>,
 }
 
-impl<T: TransactionTrait> FigureService<T> {
-    pub fn new(figure_repository: Box<dyn FigureRepositoryTrait<T>>, storage: Box<dyn ContentStore>) -> Self {
+impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureService<T, F, S> {
+    pub fn new(figure_repository: F, storage: S) -> Self {
         Self {
             figure_repository,
             storage,
+            marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<T: TransactionTrait> FigureServiceTrait for FigureService<T> {
+impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureServiceTrait for FigureService<T, F, S> {
     async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
         self.figure_repository.find_by_id(None, figure_id).await
     }
