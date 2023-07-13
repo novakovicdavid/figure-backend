@@ -7,10 +7,10 @@ pub struct MockTransactionCreator {
 }
 
 impl MockTransactionCreator {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
             _db: (),
-        }
+        })
     }
 }
 

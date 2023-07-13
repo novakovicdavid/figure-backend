@@ -12,10 +12,10 @@ pub struct MockUserRepository {
 }
 
 impl MockUserRepository {
-    pub fn new() -> Self {
-        MockUserRepository {
+    pub fn new() -> Box<Self> {
+        Box::new(MockUserRepository {
             db: Arc::new(Mutex::new(Vec::new()))
-        }
+        })
     }
 }
 

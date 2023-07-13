@@ -7,7 +7,7 @@ use bytes::Bytes;
 use crate::server_errors::ServerError;
 
 #[async_trait]
-pub trait ContentStore: Send + Sync + Clone {
+pub trait ContentStore: Send + Sync {
     async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError<String>>;
     fn get_base_url(&self) -> String;
 }
