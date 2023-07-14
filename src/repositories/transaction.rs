@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Transaction};
-use crate::repositories::traits::{TransactionCreator, TransactionTrait};
+use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
 
@@ -19,7 +19,7 @@ impl PostgresTransactionCreator {
 }
 
 #[async_trait]
-impl TransactionCreator<PostgresTransaction> for PostgresTransactionCreator {
+impl TransactionCreatorTrait<PostgresTransaction> for PostgresTransactionCreator {
     async fn create(&self) -> Result<PostgresTransaction, ServerError<String>> {
         self.db.begin().await
             .map(PostgresTransaction::new)

@@ -20,8 +20,6 @@ impl UserRepository {
     }
 }
 
-
-
 #[async_trait]
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
@@ -55,7 +53,11 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     }
 
     async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError<String>> {
-        let query_string = iformat!("SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role} FROM {UserDef::Table} WHERE {UserDef::Email.as_str()} = $1");
+        let query_string = iformat!(r#"
+        SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
+        FROM {UserDef::Table}
+        WHERE {UserDef::Email.as_str()} = $1
+        "#);
         let query =
             sqlx::query_as::<_, User>(&query_string)
                 .bind(email);
@@ -69,7 +71,11 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     }
 
     async fn find_one_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError<String>> {
-        let query_string = iformat!("SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role} FROM {UserDef::Table} WHERE {UserDef::Id.as_str()} = $1");
+        let query_string = iformat!(r#"
+        SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
+        FROM {UserDef::Table}
+        WHERE {UserDef::Id.as_str()} = $1
+        "#);
         let query =
             sqlx::query_as::<_, User>(&query_string)
                 .bind(id);

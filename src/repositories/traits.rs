@@ -8,7 +8,7 @@ use crate::entities::user::User;
 use crate::server_errors::ServerError;
 
 #[async_trait]
-pub trait TransactionCreator<T: TransactionTrait>: Send + Sync {
+pub trait TransactionCreatorTrait<T: TransactionTrait>: Send + Sync {
     async fn create(&self) -> Result<T, ServerError<String>>;
 }
 

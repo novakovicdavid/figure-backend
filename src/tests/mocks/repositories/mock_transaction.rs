@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::repositories::traits::{TransactionCreator, TransactionTrait};
+use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
 pub struct MockTransactionCreator {
@@ -15,7 +15,7 @@ impl MockTransactionCreator {
 }
 
 #[async_trait]
-impl TransactionCreator<MockTransaction> for MockTransactionCreator {
+impl TransactionCreatorTrait<MockTransaction> for MockTransactionCreator {
     async fn create(&self) -> Result<MockTransaction, ServerError<String>> {
         Ok(MockTransaction::new())
     }

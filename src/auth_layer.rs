@@ -4,15 +4,16 @@ use axum::http::{Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::Response;
 use tower_cookies::Cookies;
+use crate::context::{ContextTrait, RepositoryContextTrait};
 use crate::ServerState;
 use crate::entities::dtos::session_dtos::{SessionFromStore, SessionOption};
 use crate::repositories::traits::SessionRepositoryTrait;
 
-pub async fn authenticate<B>(State(server_state): State<Arc<ServerState>>, cookies: Cookies, mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
+pub async fn authenticate<B, C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     if let Some(cookie) = cookies.get("session_id") {
         let session_id = cookie.value();
         // Get the user id associated with the session from the session store
-        if let Ok(session_value) = server_state.context.repository_context.session_repository.find_by_id(session_id, Some(86400)).await {
+        if let Ok(session_value) = server_state.context.repository_context().session_repository().find_by_id(session_id, Some(86400)).await {
             // Pass it to the extension so that handlers/extractors can access it
             req.extensions_mut().insert(
                 SessionOption::new(

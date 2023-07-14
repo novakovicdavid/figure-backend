@@ -7,6 +7,7 @@ use cookie::{Cookie, SameSite};
 use serde::Serialize;
 use serde::Deserialize;
 use tower_cookies::Cookies;
+use crate::context::{ContextTrait, RepositoryContextTrait, ServiceContextTrait};
 use crate::ServerState;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::{Session, SessionOption};
@@ -41,8 +42,8 @@ impl From<Session> for SignInResponse {
     }
 }
 
-pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
-    return match server_state.context.service_context.user_service.authenticate_user(signin.email, signin.password).await {
+pub async fn signin_user<C: ContextTrait>(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
+    return match server_state.context.service_context().user_service().authenticate_user(signin.email, signin.password).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
@@ -57,8 +58,8 @@ pub async fn signin_user(Extension(_session_option): Extension<SessionOption>, S
     };
 }
 
-pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    return match server_state.context.service_context.user_service.signup_user(signup.email, signup.password, signup.username).await {
+pub async fn signup_user<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
+    return match server_state.context.service_context().user_service().signup_user(signup.email, signup.password, signup.username).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
@@ -73,9 +74,9 @@ pub async fn signup_user(State(server_state): State<Arc<ServerState>>, cookies: 
     };
 }
 
-pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
+pub async fn signout_user<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
     if let Some(mut cookie) = cookies.get("session_id") {
-        match server_state.context.repository_context.session_repository.remove_by_id(cookie.value()).await {
+        match server_state.context.repository_context().session_repository().remove_by_id(cookie.value()).await {
             Ok(_) => {
                 cookie.set_http_only(true);
                 cookie.set_secure(true);
@@ -94,11 +95,11 @@ pub async fn signout_user(State(server_state): State<Arc<ServerState>>, cookies:
 }
 
 // Return the profile associated with a given session
-pub async fn load_session(State(server_state): State<Arc<ServerState>>, cookies: Cookies) -> Response {
+pub async fn load_session<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
     if let Some(cookie) = cookies.get("session_id") {
-        match server_state.context.repository_context.session_repository.find_by_id(cookie.value(), Some(86400)).await {
+        match server_state.context.repository_context().session_repository().find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.context.service_context.profile_service.find_profile_by_id(session_data.get_profile_id()).await {
+                if let Ok(profile) = server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id()).await {
                     return ProfileDTO::from(profile).to_json().into_response();
                 }
                 ServerError::ResourceNotFound.into_response()

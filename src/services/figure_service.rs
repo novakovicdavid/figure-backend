@@ -10,7 +10,7 @@ use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::FigureServiceTrait;
 
-pub struct FigureService<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> {
+pub struct FigureService<T, F, S> {
     figure_repository: F,
     storage: S,
     marker: PhantomData<T>,
@@ -27,7 +27,8 @@ impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureSe
 }
 
 #[async_trait]
-impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureServiceTrait for FigureService<T, F, S> {
+impl<T, F, S> FigureServiceTrait for FigureService<T, F, S>
+    where T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore {
     async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
         self.figure_repository.find_by_id(None, figure_id).await
     }
@@ -38,7 +39,7 @@ impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureSe
 
     async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError<String>> {
         if width > i32::MAX as u32 || height > i32::MAX as u32 {
-            return Err(ServerError::ImageDimensionsTooLarge)
+            return Err(ServerError::ImageDimensionsTooLarge);
         }
 
         let uid = Uuid::new_v4();

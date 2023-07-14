@@ -7,6 +7,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use serde_json::json;
+use crate::context::{ContextTrait, ServiceContextTrait};
 use crate::entities::dtos::profile_dto::ProfileWithoutUserIdDTO;
 use crate::entities::dtos::session_dtos::SessionOption;
 use crate::entities::types::IdType;
@@ -15,8 +16,8 @@ use crate::ServerState;
 use crate::routes::figure_routes::parse_image_format;
 use crate::services::traits::ProfileServiceTrait;
 
-pub async fn get_profile(State(server_state): State<Arc<ServerState>>, Path(profile_id): Path<IdType>) -> Response {
-    let profile = server_state.context.service_context.profile_service.find_profile_by_id(profile_id).await;
+pub async fn get_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, Path(profile_id): Path<IdType>) -> Response {
+    let profile = server_state.context.service_context().profile_service().find_profile_by_id(profile_id).await;
     match profile {
         Ok(profile) => {
             json!({
@@ -27,14 +28,14 @@ pub async fn get_profile(State(server_state): State<Arc<ServerState>>, Path(prof
     }
 }
 
-pub async fn get_total_profiles_count(State(server_state): State<Arc<ServerState>>) -> Response {
-    match server_state.context.service_context.profile_service.get_total_profiles_count().await {
+pub async fn get_total_profiles_count<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> Response {
+    match server_state.context.service_context().profile_service().get_total_profiles_count().await {
         Ok(id) => id.to_string().into_response(),
         Err(_) => ServerError::InternalError("Failed to get profile count".to_string()).into_response()
     }
 }
 
-pub async fn update_profile(State(server_state): State<Arc<ServerState>>, session: Extension<SessionOption>, multipart: Multipart) -> Response {
+pub async fn update_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, session: Extension<SessionOption>, multipart: Multipart) -> Response {
     let session = match &session.session_opt {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
@@ -46,7 +47,7 @@ pub async fn update_profile(State(server_state): State<Arc<ServerState>>, sessio
         Err(_) => return ServerError::InvalidMultipart.into_response()
     };
 
-    match server_state.context.service_context.profile_service
+    match server_state.context.service_context().profile_service()
         .update_profile_by_id(session.get_profile_id(), display_name, bio, banner, profile_picture).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(e) => e.into_response()

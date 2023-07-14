@@ -29,12 +29,12 @@ use tower_http::limit::RequestBodyLimitLayer;
 use url::Url;
 use crate::auth_layer::authenticate;
 use crate::content_store::S3Storage;
-use crate::context::{Context, RepositoryContext, ServiceContext};
+use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext, ServiceContextTrait};
 use crate::entities::dtos::session_dtos::SessionOption;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
-use crate::repositories::transaction::{PostgresTransaction, PostgresTransactionCreator};
+use crate::repositories::transaction::PostgresTransactionCreator;
 use crate::repositories::user_repository::UserRepository;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
@@ -44,27 +44,18 @@ use crate::services::figure_service::FigureService;
 use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
 
-type ServiceContextType = ServiceContext<
-    UserService<PostgresTransactionCreator, PostgresTransaction, UserRepository, ProfileRepository, SessionRepository>,
-    ProfileService<PostgresTransaction, ProfileRepository, S3Storage>,
-    FigureService<PostgresTransaction, FigureRepository, S3Storage>
->;
-
-type RepositoryContextType = RepositoryContext<
-    UserRepository,
-    ProfileRepository,
-    FigureRepository,
-    SessionRepository,
-    PostgresTransactionCreator,
->;
-
-type ContextType = Context<
-    ServiceContextType,
-    RepositoryContextType>;
-
-pub struct ServerState {
-    context: ContextType,
+pub struct ServerState<C: ContextTrait> {
+    context: C,
     domain: String,
+}
+
+impl<C: ContextTrait> ServerState<C> {
+    pub fn new(context: C, domain: String) -> Self {
+        Self {
+            context,
+            domain,
+        }
+    }
 }
 
 #[tokio::main]
@@ -116,7 +107,6 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let db_pool = db_pool_future.await??;
     let session_store = session_store_connection_future.await??;
     let server_state = create_state(db_pool, session_store, content_store, domain);
-
     info!("Setting up routes and layers...");
     let app = create_app(server_state, cors, authentication_extension);
 
@@ -131,7 +121,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
+fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors: CorsLayer, authentication_extension: SessionOption) -> Router {
     Router::new()
         .route("/profile/update", post(update_profile))
         .route("/figures/upload", post(upload_figure))
@@ -163,24 +153,28 @@ fn create_app(server_state: Arc<ServerState>, cors: CorsLayer, authentication_ex
         .with_state(server_state)
 }
 
-fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState> {
+fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState<impl ContextTrait>> {
+    // Initialize repositories
+    let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
     let user_repository = UserRepository::new(db_pool.clone());
     let profile_repository = ProfileRepository::new(db_pool.clone());
     let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
-    let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
+
+    // Initialize services
     let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone(), session_repository.clone());
     let profile_service = ProfileService::new(profile_repository.clone(), content_store.clone());
     let figure_service = FigureService::new(figure_repository.clone(), content_store);
+
+    // Create service and repository contexts
     let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);
     let service_context = ServiceContext::new(user_service, profile_service, figure_service);
+
+    // Combine contexts
     let context = Context::new(service_context, repository_context);
 
-    Arc::new(ServerState {
-        context,
-        domain,
-    })
-
+    // Resulting state
+    Arc::new(ServerState::new(context, domain))
 }
 
 fn create_authentication_extension() -> SessionOption {

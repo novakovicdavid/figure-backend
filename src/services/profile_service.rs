@@ -9,7 +9,7 @@ use crate::repositories::traits::{ProfileRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::ProfileServiceTrait;
 
-pub struct ProfileService<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> {
+pub struct ProfileService<T, P, S> {
     profile_repository: P,
     storage: S,
     marker: PhantomData<T>,
@@ -26,7 +26,8 @@ impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> Profile
 }
 
 #[async_trait]
-impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> ProfileServiceTrait for ProfileService<T, P, S> {
+impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
+    where T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore {
     async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>> {
         self.profile_repository.find_by_id(None, profile_id).await
     }

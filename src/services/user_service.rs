@@ -12,17 +12,19 @@ use rand_core::OsRng;
 use uuid::Uuid;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::Session;
-use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreator, TransactionTrait, UserRepositoryTrait};
+use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
 
 
 lazy_static! {
-    static ref EMAIL_REGEX: Regex = Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();
-    static ref USERNAME_REGEX: Regex = Regex::new("^[a-zA-Z0-9]+-*[a-zA-Z0-9]+?$").unwrap();
+    static ref EMAIL_REGEX: Regex =
+    Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();
+    static ref USERNAME_REGEX: Regex =
+    Regex::new("^[a-zA-Z0-9]+-*[a-zA-Z0-9]+?$").unwrap();
 }
 
 #[derive(Clone)]
-pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> {
+pub struct UserService<TC, T, U, P, S> {
     user_repository: U,
     profile_repository: P,
     session_repository: S,
@@ -32,7 +34,7 @@ pub struct UserService<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRe
 
 impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
     where
-        TC: TransactionCreator<T>,
+        TC: TransactionCreatorTrait<T>,
         T: TransactionTrait,
         U: UserRepositoryTrait<T>,
         P: ProfileRepositoryTrait<T>,
@@ -50,7 +52,9 @@ impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
 }
 
 #[async_trait]
-impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait> UserServiceTrait for UserService<TC, T, U, P, S> {
+impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
+    where TC: TransactionCreatorTrait<T>, T: TransactionTrait,
+          U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
@@ -83,7 +87,7 @@ impl<TC: TransactionCreator<T>, T: TransactionTrait, U: UserRepositoryTrait<T>, 
                     Uuid::new_v4().to_string(),
                     user.id,
                     profile.id,
-                    Some(86400)
+                    Some(86400),
                 );
 
                 let session = match self.session_repository.create(session).await {
