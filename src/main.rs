@@ -71,9 +71,10 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     info!("Connecting to database...");
     let db_pool_future = task::spawn(async move {
+        let time = Instant::now();
         Pool::<Postgres>::connect(&database_url).await
             .map(|pool| {
-                info!("Connected to database...");
+                info!("Connected to database in {}ms...", time.elapsed().as_millis());
                 pool
             })
     });
@@ -82,11 +83,14 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let session_store_url = env::var("REDIS_URL").expect("No REDIS_URL env found");
     info!("Connecting to session store...");
     let client = redis::Client::open(session_store_url)?;
-    let session_store_connection_future = task::spawn(ConnectionManager::new(client)
-        .then(|session_store| async {
-            info!("Connected to session store...");
-            session_store
-        }));
+    let session_store_connection_future = task::spawn(async move {
+        let time = Instant::now();
+        ConnectionManager::new(client).await
+            .map(|session_store| {
+                info!("Connected to session store in {}ms...", time.elapsed().as_millis());
+                session_store
+            })
+    });
 
     let key_id = env::var("S3_APP_ID").expect("No S3_APP_ID env found");
     let app_key = env::var("S3_APP_KEY").expect("No S3_APP_KEY env found");
