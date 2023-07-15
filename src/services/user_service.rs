@@ -9,11 +9,11 @@ use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
-use uuid::Uuid;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
+use crate::utilities::traits::RandomNumberGenerator;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
@@ -23,37 +23,42 @@ lazy_static! {
 }
 
 #[derive(Clone)]
-pub struct UserService<TC, T, U, P, S> {
+pub struct UserService<TC, T, U, P, S, R> {
+    transaction_creator: TC,
+    marker: PhantomData<T>,
     user_repository: U,
     profile_repository: P,
     session_repository: S,
-    transaction_creator: TC,
-    marker: PhantomData<T>,
+    secure_random_generator: R,
+
 }
 
-impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
+impl<TC, T, U, P, S, R> UserService<TC, T, U, P, S, R>
     where
         TC: TransactionCreatorTrait<T>,
         T: TransactionTrait,
         U: UserRepositoryTrait<T>,
         P: ProfileRepositoryTrait<T>,
         S: SessionRepositoryTrait,
+        R: RandomNumberGenerator,
 {
-    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P, session_repository: S) -> Self {
+    pub fn new(transaction_creator: TC, user_repository: U, profile_repository: P, session_repository: S, secure_random_generator: R) -> Self {
         UserService {
             user_repository,
             profile_repository,
             session_repository,
             transaction_creator,
+            secure_random_generator,
             marker: PhantomData::default(),
         }
     }
 }
 
 #[async_trait]
-impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
+impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
     where TC: TransactionCreatorTrait<T>, T: TransactionTrait,
-          U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait {
+          U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait,
+          R: RandomNumberGenerator {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
@@ -75,7 +80,7 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
                 transaction.commit().await?;
 
                 let session = Session::new(
-                    Uuid::new_v4().to_string(),
+                    self.secure_random_generator.generate()?.to_string(),
                     user.id,
                     profile.id,
                     Some(86400),
@@ -98,7 +103,6 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
             Err(e) => {
                 return Err(ServerError::InternalError(e.into()));
             }
-
         };
         if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_err() {
             return Err(ServerError::WrongPassword);
@@ -108,7 +112,7 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
             Err(e) => return Err(ServerError::InternalError(e.into())),
         };
 
-        let session = match self.session_repository.create(Session::new(Uuid::new_v4().to_string(), user.id, profile.id, Some(86400))).await {
+        let session = match self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.id, profile.id, Some(86400))).await {
             Ok(session) => session,
             Err(e) => return Err(ServerError::InternalError(e.into())),
         };

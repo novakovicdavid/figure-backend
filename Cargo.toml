@@ -37,6 +37,8 @@ bytes = "1.4.0"
 interpol = { git = "https://github.com/novakovicdavid/interpol.git" }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1.37"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
 
 [dev-dependencies]
 hyper = "0.14.23"

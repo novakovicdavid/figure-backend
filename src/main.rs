@@ -7,18 +7,18 @@ mod content_store;
 mod services;
 mod repositories;
 mod context;
+mod utilities;
 
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use axum::{BoxError, Extension, middleware, Router};
+use axum::{Extension, middleware, Router};
 use axum::extract::DefaultBodyLimit;
 use axum::http::header::{ACCEPT, CONTENT_TYPE};
-use axum::http::{Method, StatusCode};
+use axum::http::Method;
 use axum::routing::get;
 use axum::routing::post;
-use futures::FutureExt;
 use redis::aio::ConnectionManager;
 use sqlx::{Pool, Postgres};
 use tokio::task;
@@ -43,6 +43,7 @@ use crate::routes::profile_routes::{get_profile, get_total_profiles_count, updat
 use crate::services::figure_service::FigureService;
 use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
+use crate::utilities::secure_rand_generator::ChaCha20;
 
 pub struct ServerState<C: ContextTrait> {
     context: C,
@@ -170,8 +171,14 @@ fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, conte
     let figure_repository = FigureRepository::new(db_pool.clone());
     let session_repository = SessionRepository::new(session_store);
 
+    // Initialize utilities
+    let secure_random_generator = ChaCha20::new();
+
     // Initialize services
-    let user_service = UserService::new(transaction_starter.clone(), user_repository.clone(), profile_repository.clone(), session_repository.clone());
+    let user_service = UserService::new(
+        transaction_starter.clone(), user_repository.clone(),
+        profile_repository.clone(), session_repository.clone(),
+        secure_random_generator);
     let profile_service = ProfileService::new(profile_repository.clone(), content_store.clone());
     let figure_service = FigureService::new(figure_repository.clone(), content_store);
 

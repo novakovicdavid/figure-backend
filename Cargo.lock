@@ -1021,6 +1021,8 @@ dependencies = [
  "interpol",
  "lazy_static",
  "mime",
+ "rand",
+ "rand_chacha",
  "rand_core",
  "redis",
  "regex",
