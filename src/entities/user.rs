@@ -23,7 +23,7 @@ pub enum UserDef {
 impl UserDef {
     pub fn as_str(&self) -> &str {
         match self {
-            UserDef::Table => "user",
+            UserDef::Table => "\"user\"",
             UserDef::Id => "id",
             UserDef::Email => "email",
             UserDef::Password => "password",
@@ -33,11 +33,11 @@ impl UserDef {
 
     pub fn as_table_str(&self) -> &str {
         match self {
-            UserDef::Table => "user",
-            UserDef::Id => "user.id",
-            UserDef::Email => "user.email",
-            UserDef::Password => "user.password",
-            UserDef::Role => "user.role",
+            UserDef::Table => "\"user\"",
+            UserDef::Id => "\"user\".id",
+            UserDef::Email => "\"user\".email",
+            UserDef::Password => "\"user\".password",
+            UserDef::Role => "\"user\".role",
         }
     }
 
