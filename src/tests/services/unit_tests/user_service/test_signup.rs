@@ -90,42 +90,42 @@ pub async fn signup_invalid_email() {
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 
     // Missing tld
     let signup_result = user_service.signup_user("test@test".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 
     // Missing email username
     let signup_result = user_service.signup_user("@test.test".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 
     // Only @
     let signup_result = user_service.signup_user("@".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 
     // Empty email
     let signup_result = user_service.signup_user("".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 
     // Too long
     let signup_result = user_service.signup_user("1234567890123456789012345678901234567890123456789012345678901".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 }
 
 #[tokio::test]
@@ -141,5 +141,5 @@ pub async fn signup_invalid_username() {
     let saved_user = user_repository.find_one_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidUsername));
-    assert!(saved_user.is_err());
+    assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
 }
