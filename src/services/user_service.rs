@@ -15,7 +15,6 @@ use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
 
-
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
     Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();

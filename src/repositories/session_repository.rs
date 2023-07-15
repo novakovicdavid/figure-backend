@@ -26,8 +26,6 @@ pub struct SessionValueInStore {
     pub profile_id: IdType,
 }
 
-
-
 #[async_trait]
 impl SessionRepositoryTrait for SessionRepository {
     async fn create(&self, session: Session) -> Result<Session, ServerError> {

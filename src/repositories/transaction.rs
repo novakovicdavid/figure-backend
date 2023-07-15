@@ -3,8 +3,6 @@ use sqlx::{Pool, Postgres, Transaction};
 use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
-
-
 #[derive(Clone)]
 pub struct PostgresTransactionCreator {
     db: Pool<Postgres>
@@ -26,8 +24,6 @@ impl TransactionCreatorTrait<PostgresTransaction> for PostgresTransactionCreator
             .map_err(|e| ServerError::InternalError(e.into()))
     }
 }
-
-
 
 pub struct PostgresTransaction {
     transaction: Transaction<'static, Postgres>

@@ -20,8 +20,6 @@ impl ProfileRepository {
     }
 }
 
-
-
 #[async_trait]
 impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError> {
