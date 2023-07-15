@@ -29,7 +29,7 @@ pub enum ProfileDef {
 impl ProfileDef {
     pub fn as_str(&self) -> &str {
         match self {
-            ProfileDef::Table => "profiles",
+            ProfileDef::Table => "profile",
             ProfileDef::Id => "id",
             ProfileDef::Username => "username",
             ProfileDef::DisplayName => "display_name",
@@ -42,14 +42,14 @@ impl ProfileDef {
 
     pub fn as_table_str(&self) -> &str {
         match self {
-            ProfileDef::Table => "profiles",
-            ProfileDef::Id => "profiles.id",
-            ProfileDef::Username => "profiles.username",
-            ProfileDef::DisplayName => "profiles.display_name",
-            ProfileDef::Bio => "profiles.bio",
-            ProfileDef::Banner => "profiles.banner",
-            ProfileDef::ProfilePicture => "profiles.profile_picture",
-            ProfileDef::UserId => "profiles.user_id",
+            ProfileDef::Table => "profile",
+            ProfileDef::Id => "profile.id",
+            ProfileDef::Username => "profile.username",
+            ProfileDef::DisplayName => "profile.display_name",
+            ProfileDef::Bio => "profile.bio",
+            ProfileDef::Banner => "profile.banner",
+            ProfileDef::ProfilePicture => "profile.profile_picture",
+            ProfileDef::UserId => "profile.user_id",
         }
     }
 

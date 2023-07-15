@@ -29,7 +29,7 @@ pub enum FigureDef {
 impl FigureDef {
     pub fn as_str(&self) -> &str {
         match self {
-            FigureDef::Table => "figures",
+            FigureDef::Table => "figure",
             FigureDef::Id => "id",
             FigureDef::Title => "title",
             FigureDef::Description => "description",
@@ -42,14 +42,14 @@ impl FigureDef {
 
     pub fn as_table_str(&self) -> &str {
         match self {
-            FigureDef::Table => "figures",
-            FigureDef::Id => "figures.id",
-            FigureDef::Title => "figures.title",
-            FigureDef::Description => "figures.description",
-            FigureDef::Width => "figures.width",
-            FigureDef::Height => "figures.height",
-            FigureDef::Url => "figures.url",
-            FigureDef::ProfileId => "figures.profile_id",
+            FigureDef::Table => "figure",
+            FigureDef::Id => "figure.id",
+            FigureDef::Title => "figure.title",
+            FigureDef::Description => "figure.description",
+            FigureDef::Width => "figure.width",
+            FigureDef::Height => "figure.height",
+            FigureDef::Url => "figure.url",
+            FigureDef::ProfileId => "figure.profile_id",
         }
     }
 
