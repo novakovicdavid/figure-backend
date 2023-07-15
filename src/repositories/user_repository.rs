@@ -46,7 +46,7 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
                 match e {
                     sqlx::Error::Database(e) => {
                         // TODO don't hardcode this
-                        if e.constraint() == Some("email_key") {
+                        if e.constraint() == Some("user_email_uindex") {
                             return ServerError::EmailAlreadyInUse
                         }
                         ServerError::InternalError(e.into())

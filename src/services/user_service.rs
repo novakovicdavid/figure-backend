@@ -14,6 +14,7 @@ use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
 use crate::utilities::traits::RandomNumberGenerator;
+use interpol::format as iformat;
 
 lazy_static! {
     static ref EMAIL_REGEX: Regex =
@@ -73,24 +74,20 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
             Err(e) => return Err(e)
         };
 
-        match self.transaction_creator.create().await {
-            Ok(mut transaction) => {
-                let user = self.user_repository.create(Some(&mut transaction), email, password_hash).await?;
-                let profile = self.profile_repository.create(Some(&mut transaction), username, user.id).await?;
-                transaction.commit().await?;
+        let mut transaction = self.transaction_creator.create().await?;
+        let user = self.user_repository.create(Some(&mut transaction), email, password_hash).await?;
+        let profile = self.profile_repository.create(Some(&mut transaction), username, user.id).await?;
+        transaction.commit().await?;
 
-                let session = Session::new(
-                    self.secure_random_generator.generate()?.to_string(),
-                    user.id,
-                    profile.id,
-                    Some(86400),
-                );
+        let session = Session::new(
+            self.secure_random_generator.generate()?.to_string(),
+            user.id,
+            profile.id,
+            Some(86400),
+        );
 
-                let session = self.session_repository.create(session).await?;
-                Ok((ProfileDTO::from(profile), session))
-            }
-            Err(e) => Err(e)
-        }
+        let session = self.session_repository.create(session).await?;
+        Ok((ProfileDTO::from(profile), session))
     }
 
     async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError> {
@@ -98,6 +95,7 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
             Ok(user) => user,
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
         };
+
         let parsed_hash = match PasswordHash::new(&user.password) {
             Ok(hash) => hash,
             Err(e) => {
@@ -109,13 +107,11 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
         }
         let profile = match self.profile_repository.find_by_user_id(None, user.id).await {
             Ok(profile) => profile,
-            Err(e) => return Err(ServerError::InternalError(e.into())),
+            Err(e) => return Err(ServerError::InternalError(anyhow::Error::from(e)
+                .context(iformat!("Profile associated with user (id: {user.id}) not found.")))),
         };
 
-        let session = match self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.id, profile.id, Some(86400))).await {
-            Ok(session) => session,
-            Err(e) => return Err(ServerError::InternalError(e.into())),
-        };
+        let session = self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.id, profile.id, Some(86400))).await?;
         Ok((ProfileDTO::from(profile), session))
     }
 }

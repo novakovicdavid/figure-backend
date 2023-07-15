@@ -48,7 +48,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
                 match e {
                     sqlx::Error::Database(e) => {
                         // TODO don't hardcode this
-                        if e.constraint() == Some("username_key") {
+                        if e.constraint() == Some("profile_username_uindex") {
                             return ServerError::UsernameAlreadyTaken
                         }
                         ServerError::InternalError(e.into())
