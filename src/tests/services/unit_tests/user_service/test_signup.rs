@@ -9,6 +9,7 @@ use crate::tests::mocks::repositories::mock_profile_repository::MockProfileRepos
 use crate::tests::mocks::repositories::mock_session_repository::MockSessionRepository;
 use crate::tests::mocks::repositories::mock_transaction::MockTransactionCreator;
 use crate::tests::mocks::repositories::mock_user_repository::MockUserRepository;
+use crate::tests::mocks::utilities::secure_rand_generator::FakeRandomGenerator;
 
 #[tokio::test]
 pub async fn signup() {
@@ -16,8 +17,9 @@ pub async fn signup() {
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
     let transaction_creator = MockTransactionCreator::new();
+    let random_number_generator = FakeRandomGenerator::new();
 
-    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, );
+    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
     let result = user_service.signup_user("test@test.test".to_string(), "test1234".to_string(), "test".to_string()).await;
     let (profile, session) = result.unwrap();
@@ -35,7 +37,7 @@ pub async fn signup() {
         display_name: None,
     };
     let expected_session = Session::new(
-        session.get_id(),
+        0.to_string(),
         0,
         0,
         session.get_time_until_expiration(),
@@ -49,8 +51,9 @@ pub async fn signup_password_too_short() {
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
     let transaction_creator = MockTransactionCreator::new();
+    let random_number_generator = FakeRandomGenerator::new();
 
-    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, );
+    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
     let signup_result = user_service.signup_user("test@test.test".to_string(), "1234567".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
@@ -66,8 +69,9 @@ pub async fn password_too_long() {
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
     let transaction_creator = MockTransactionCreator::new();
+    let random_number_generator = FakeRandomGenerator::new();
 
-    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, );
+    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
     let signup_result = user_service.signup_user("test@test.test".to_string(), "1111111111111111111111111111111111111111111111111111111111111".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
@@ -82,8 +86,9 @@ pub async fn signup_invalid_email() {
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
     let transaction_creator = MockTransactionCreator::new();
+    let random_number_generator = FakeRandomGenerator::new();
 
-    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, );
+    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
     // Missing @
     let signup_result = user_service.signup_user("testtest.test".to_string(), "1234567".to_string(), "test".to_string()).await;
@@ -134,8 +139,9 @@ pub async fn signup_invalid_username() {
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
     let transaction_creator = MockTransactionCreator::new();
+    let random_number_generator = FakeRandomGenerator::new();
 
-    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, );
+    let user_service = UserService::new(transaction_creator, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
     let signup_result = user_service.signup_user("test@test.test".to_string(), "1234567".to_string(), "".to_string()).await;
     let saved_user = user_repository.find_one_by_id(None, 0).await;
