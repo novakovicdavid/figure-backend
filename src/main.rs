@@ -12,14 +12,13 @@ use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use axum::{Extension, middleware, Router};
+use axum::{BoxError, Extension, middleware, Router};
 use axum::extract::DefaultBodyLimit;
 use axum::http::header::{ACCEPT, CONTENT_TYPE};
-use axum::http::Method;
+use axum::http::{Method, StatusCode};
 use axum::routing::get;
 use axum::routing::post;
 use futures::FutureExt;
-use log::info;
 use redis::aio::ConnectionManager;
 use sqlx::{Pool, Postgres};
 use tokio::task;
@@ -27,9 +26,10 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use url::Url;
+use tracing::{info, Level};
 use crate::auth_layer::authenticate;
 use crate::content_store::S3Storage;
-use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext, ServiceContextTrait};
+use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext};
 use crate::entities::dtos::session_dtos::SessionOption;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
@@ -61,7 +61,12 @@ impl<C: ContextTrait> ServerState<C> {
 #[tokio::main]
 async fn main() -> anyhow::Result<(), anyhow::Error> {
     let time_to_start = Instant::now();
-    env_logger::init();
+
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_max_level(Level::WARN)
+        .with_env_filter("figure_backend=info")
+        .init();
 
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     info!("Connecting to database...");

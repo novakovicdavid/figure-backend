@@ -16,7 +16,7 @@ impl MockTransactionCreator {
 
 #[async_trait]
 impl TransactionCreatorTrait<MockTransaction> for MockTransactionCreator {
-    async fn create(&self) -> Result<MockTransaction, ServerError<String>> {
+    async fn create(&self) -> Result<MockTransaction, ServerError> {
         Ok(MockTransaction::new())
     }
 }
@@ -36,7 +36,7 @@ impl MockTransaction {
 #[async_trait]
 impl TransactionTrait for MockTransaction {
     type Inner = ();
-    async fn commit(self) -> Result<(), ServerError<String>> {
+    async fn commit(self) -> Result<(), ServerError> {
         Ok(())
     }
 

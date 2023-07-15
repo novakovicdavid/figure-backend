@@ -55,7 +55,7 @@ impl<TC, T, U, P, S> UserService<TC, T, U, P, S>
 impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
     where TC: TransactionCreatorTrait<T>, T: TransactionTrait,
           U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
+    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError> {
         if !is_email_valid(&email) {
             return Err(ServerError::InvalidEmail);
         }
@@ -71,17 +71,9 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
 
         match self.transaction_creator.create().await {
             Ok(mut transaction) => {
-                let user = match self.user_repository.create(Some(&mut transaction), email, password_hash).await {
-                    Ok(user) => user,
-                    Err(_) => return Err(ServerError::EmailAlreadyInUse),
-                };
-                let profile = match self.profile_repository.create(Some(&mut transaction), username, user.id).await {
-                    Ok(profile) => profile,
-                    Err(_) => return Err(ServerError::UsernameAlreadyTaken),
-                };
-                if (transaction.commit().await).is_err() {
-                    return Err(ServerError::TransactionFailed);
-                }
+                let user = self.user_repository.create(Some(&mut transaction), email, password_hash).await?;
+                let profile = self.profile_repository.create(Some(&mut transaction), username, user.id).await?;
+                transaction.commit().await?;
 
                 let session = Session::new(
                     Uuid::new_v4().to_string(),
@@ -90,17 +82,14 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
                     Some(86400),
                 );
 
-                let session = match self.session_repository.create(session).await {
-                    Ok(session) => session,
-                    Err(_) => return Err(ServerError::SessionCreationFailed),
-                };
+                let session = self.session_repository.create(session).await?;
                 Ok((ProfileDTO::from(profile), session))
             }
             Err(e) => Err(e)
         }
     }
 
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError<String>> {
+    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError> {
         let user = match self.user_repository.find_one_by_email(None, email).await {
             Ok(user) => user,
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
@@ -108,20 +97,21 @@ impl<TC, T, U, P, S> UserServiceTrait for UserService<TC, T, U, P, S>
         let parsed_hash = match PasswordHash::new(&user.password) {
             Ok(hash) => hash,
             Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
+                return Err(ServerError::InternalError(e.into()));
             }
+
         };
         if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_err() {
             return Err(ServerError::WrongPassword);
         }
         let profile = match self.profile_repository.find_by_user_id(None, user.id).await {
             Ok(profile) => profile,
-            Err(e) => return Err(ServerError::InternalError(e.to_string())),
+            Err(e) => return Err(ServerError::InternalError(e.into())),
         };
 
         let session = match self.session_repository.create(Session::new(Uuid::new_v4().to_string(), user.id, profile.id, Some(86400))).await {
             Ok(session) => session,
-            Err(e) => return Err(ServerError::InternalError(e.to_string())),
+            Err(e) => return Err(ServerError::InternalError(e.into())),
         };
         Ok((ProfileDTO::from(profile), session))
     }
@@ -140,7 +130,7 @@ fn is_username_valid(username: &str) -> bool {
     USERNAME_REGEX.is_match(username) && (3..=15).contains(&username_count)
 }
 
-pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError<String>> {
+pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError> {
     if with_checks {
         let password_length = password.graphemes(true).count();
         if password_length < 8 {
@@ -155,13 +145,13 @@ pub fn hash_password(password: &str, with_checks: bool) -> Result<String, Server
     let argon2_params = match Params::new(8192, 5, 1, Some(32)) {
         Ok(argon2_params) => argon2_params,
         Err(e) => {
-            return Err(ServerError::InternalError(e.to_string()));
+            return Err(ServerError::InternalError(e.into()));
         }
     };
     let password_hash = match Argon2::new(Argon2id, argon2::Version::V0x13, argon2_params).hash_password(password.as_ref(), &password_salt) {
         Ok(password_hash) => password_hash,
         Err(e) => {
-            return Err(ServerError::InternalError(e.to_string()));
+            return Err(ServerError::InternalError(e.into()));
         }
     };
     Ok(password_hash.to_string())

@@ -8,27 +8,25 @@ edition = "2021"
 [dependencies]
 sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "postgres"] }
 tokio = { version = "1.29.1", features = ["full"] }
-anyhow = "1.0.71"
+anyhow = { version = "1.0.71", features = ["backtrace"] }
 axum = { version = "0.6.18", features = ["multipart"] }
 axum-macros = "0.3.7"
 tower = "0.4.13"
-tower-http = { version = "0.4.1", features = ["cors", "limit"] }
+tower-http = { version = "0.4.1", features = ["cors", "limit", "trace", "tracing"] }
 tower-cookies = { version = "0.9.0", features = ["signed", "private"] }
 cookie = { version = "0.17.0", features = ["secure"] }
 async-trait = "0.1.71"
 serde = { version = "1.0.166", features = ["derive"] }
 serde_json = "1.0.100"
-log = "0.4.19"
+#log = "0.4.19"
 env_logger = "0.10.0"
-argon2 = "0.5.0"
+argon2 = { version = "0.5.0", features = ["std"] }
 rand_core = "0.6.4"
 unicode-segmentation = "1.10.1"
 regex = "1.9.0"
 lazy_static = "1.4.0"
 redis = { version = "0.23.0", features = ["tokio-comp", "tokio-rustls-comp", "connection-manager"] }
-uuid = { version = "1.4.0", features = [
-    "v4", # Lets you generate random UUIDs
-] }
+uuid = { version = "1.4.0", features = ["v4"] }
 url = "2.4.0"
 futures = "0.3.28"
 aws-sdk-s3 = "0.23.0"
@@ -36,8 +34,9 @@ aws-config = "0.53.0"
 aws-credential-types = "0.53.0"
 image = "0.24.6"
 bytes = "1.4.0"
-#sea-query = { version = "0.28.5", features = ["attr"] }
 interpol = { git = "https://github.com/novakovicdavid/interpol.git" }
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing = "0.1.37"
 
 [dev-dependencies]
 hyper = "0.14.23"

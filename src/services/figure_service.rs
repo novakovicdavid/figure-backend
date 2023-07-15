@@ -29,15 +29,19 @@ impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureSe
 #[async_trait]
 impl<T, F, S> FigureServiceTrait for FigureService<T, F, S>
     where T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore {
-    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
-        self.figure_repository.find_by_id(None, figure_id).await
+    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError> {
+        self.figure_repository.find_by_id(None, figure_id)
+            .await
+            .map_err(ServerError::from)
     }
 
-    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>> {
-        self.figure_repository.find_starting_from_id_with_profile_id(None, figure_id, profile_id, limit).await
+    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError> {
+        self.figure_repository.find_starting_from_id_with_profile_id(None, figure_id, profile_id, limit)
+            .await
+            .map_err(ServerError::from)
     }
 
-    async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError<String>> {
+    async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError> {
         if width > i32::MAX as u32 || height > i32::MAX as u32 {
             return Err(ServerError::ImageDimensionsTooLarge);
         }
@@ -53,14 +57,20 @@ impl<T, F, S> FigureServiceTrait for FigureService<T, F, S>
             height: height as i32,
             url,
             profile_id,
-        }).await
+        })
+            .await
+            .map_err(ServerError::from)
     }
 
-    async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError<String>> {
-        self.figure_repository.count_by_profile_id(None, profile_id).await
+    async fn get_total_figures_by_profile(&self, profile_id: IdType) -> Result<IdType, ServerError> {
+        self.figure_repository.count_by_profile_id(None, profile_id)
+            .await
+            .map_err(ServerError::from)
     }
 
-    async fn get_total_figures_count(&self) -> Result<IdType, ServerError<String>> {
-        self.figure_repository.get_total_figures_count(None).await
+    async fn get_total_figures_count(&self) -> Result<IdType, ServerError> {
+        self.figure_repository.get_total_figures_count(None)
+            .await
+            .map_err(ServerError::from)
     }
 }

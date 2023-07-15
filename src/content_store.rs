@@ -8,7 +8,7 @@ use crate::server_errors::ServerError;
 
 #[async_trait]
 pub trait ContentStore: Send + Sync + Clone {
-    async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError<String>>;
+    async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError>;
     fn get_base_url(&self) -> String;
 }
 
@@ -21,7 +21,7 @@ pub struct S3Storage {
 
 #[async_trait]
 impl ContentStore for S3Storage {
-    async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError<String>> {
+    async fn upload_image(&self, name: &str, bytes: Bytes) -> Result<String, ServerError> {
         self.client.put_object()
             .bucket(&self.bucket)
             .key(name)
@@ -29,7 +29,7 @@ impl ContentStore for S3Storage {
             .body(ByteStream::from(bytes))
             .send().await
             .map(|_| format!("{}{}", self.base_storage_url, name))
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     fn get_base_url(&self) -> String {

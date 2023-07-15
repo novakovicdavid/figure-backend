@@ -28,11 +28,11 @@ impl<T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore> Profile
 #[async_trait]
 impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
     where T: TransactionTrait, P: ProfileRepositoryTrait<T>, S: ContentStore {
-    async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_profile_by_id(&self, profile_id: IdType) -> Result<Profile, ServerError> {
         self.profile_repository.find_by_id(None, profile_id).await
     }
 
-    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError<String>> {
+    async fn update_profile_by_id(&self, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<Bytes>, profile_picture: Option<Bytes>) -> Result<(), ServerError> {
         let mut banner_url = None;
         let mut profile_picture_url = None;
 
@@ -41,19 +41,19 @@ impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
             banner_url = self.storage.upload_image(url.as_str(), banner)
                 .await
                 .map(Some)
-                .map_err(|e| ServerError::InternalError(e.to_string()))?;
+                .map_err(|e| ServerError::InternalError(e.into()))?;
         }
         if let Some(profile_picture) = profile_picture {
             let url = format!("profile_pictures/{}", Uuid::new_v4());
             profile_picture_url = self.storage.upload_image(url.as_str(), profile_picture)
                 .await
                 .map(Some)
-                .map_err(|e| ServerError::InternalError(e.to_string()))?;
+                .map_err(|e| ServerError::InternalError(e.into()))?;
         }
         self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
     }
 
-    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError<String>> {
+    async fn get_total_profiles_count(&self) -> Result<IdType, ServerError> {
         self.profile_repository.get_total_profiles_count(None).await
     }
 }

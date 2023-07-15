@@ -3,11 +3,10 @@ use std::fmt::{Display, Formatter};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use log::error;
-use sqlx::Error;
+use tracing::error;
 
-#[derive(Debug, PartialEq)]
-pub enum ServerError<T: ToString> {
+#[derive(Debug)]
+pub enum ServerError {
     InvalidEmail,
     InvalidUsername,
     PasswordTooShort,
@@ -17,18 +16,13 @@ pub enum ServerError<T: ToString> {
     UserWithEmailNotFound,
     WrongPassword,
     ResourceNotFound,
-    ConstraintError,
-    // No session found in datastore
-    NoSessionFound,
     // No session cookie received
     NoSessionReceived,
     InvalidImage,
     MissingFieldInForm,
     InvalidMultipart,
-    TransactionFailed,
     ImageDimensionsTooLarge,
-    SessionCreationFailed,
-    InternalError(T)
+    InternalError(anyhow::Error),
 }
 
 #[derive(Serialize)]
@@ -36,7 +30,7 @@ pub struct ErrorResponse<'a> {
     pub(crate) error: &'a str,
 }
 
-impl Display for ServerError<String> {
+impl Display for ServerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let message = match self {
             ServerError::InvalidEmail => "invalid-email",
@@ -48,37 +42,21 @@ impl Display for ServerError<String> {
             ServerError::UserWithEmailNotFound => "user-with-email-not-found",
             ServerError::WrongPassword => "wrong-password",
             ServerError::ResourceNotFound => "resource-not-found",
-            ServerError::ConstraintError => "constraint-error",
-            ServerError::NoSessionFound => "no-session-found",
             ServerError::NoSessionReceived => "no-session-received",
             ServerError::InvalidImage => "invalid-image",
             ServerError::MissingFieldInForm => "missing-field-in-form",
             ServerError::InvalidMultipart => "invalid-multipart",
-            ServerError::TransactionFailed => "transaction-failed",
             ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
-            ServerError::SessionCreationFailed => "session-creation-failed",
             ServerError::InternalError(error) => {
-                error!("Internal server error: {}", error);
-                "internal-error"
+                error!("Internal server error: {}\n{}", error, error.backtrace());
+                "internal-server-error"
             }
         };
         write!(f, "{}", message)
     }
 }
 
-impl ServerError<String> {
-    pub fn parse_db_error(error: &Error) -> ServerError<String>{
-        if let Error::Database(ref e) = error {
-            // Constraint violation, email address likely already used
-            if e.constraint().is_some() {
-                return ServerError::ConstraintError;
-            }
-        }
-        ServerError::InternalError(error.to_string())
-    }
-}
-
-impl IntoResponse for ServerError<String> {
+impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
             ServerError::InvalidEmail => StatusCode::BAD_REQUEST,
@@ -87,19 +65,15 @@ impl IntoResponse for ServerError<String> {
             ServerError::PasswordTooLong => StatusCode::BAD_REQUEST,
             ServerError::EmailAlreadyInUse => StatusCode::BAD_REQUEST,
             ServerError::UsernameAlreadyTaken => StatusCode::BAD_REQUEST,
-            ServerError::UserWithEmailNotFound => StatusCode::BAD_REQUEST,
+            ServerError::UserWithEmailNotFound => StatusCode::NOT_FOUND,
             ServerError::WrongPassword => StatusCode::BAD_REQUEST,
-            ServerError::ResourceNotFound => StatusCode::BAD_REQUEST,
-            ServerError::ConstraintError => StatusCode::BAD_REQUEST,
-            ServerError::NoSessionFound => StatusCode::BAD_REQUEST,
-            ServerError::NoSessionReceived => StatusCode::OK,
+            ServerError::ResourceNotFound => StatusCode::NOT_FOUND,
+            ServerError::NoSessionReceived => StatusCode::BAD_REQUEST,
             ServerError::InvalidImage => StatusCode::BAD_REQUEST,
             ServerError::MissingFieldInForm => StatusCode::BAD_REQUEST,
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
-            ServerError::TransactionFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
-            ServerError::SessionCreationFailed => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR
+            ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         (
             status_code,
@@ -110,4 +84,10 @@ impl IntoResponse for ServerError<String> {
     }
 }
 
-impl std::error::Error for ServerError<String> {}
+impl std::error::Error for ServerError {}
+
+impl PartialEq for ServerError {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
+}

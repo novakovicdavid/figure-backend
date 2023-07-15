@@ -30,7 +30,7 @@ pub struct SessionValueInStore {
 
 #[async_trait]
 impl SessionRepositoryTrait for SessionRepository {
-    async fn create(&self, session: Session) -> Result<Session, ServerError<String>> {
+    async fn create(&self, session: Session) -> Result<Session, ServerError> {
         let session_in_store = SessionValueInStore {
             user_id: session.get_user_id(),
             profile_id: session.get_profile_id(),
@@ -38,7 +38,7 @@ impl SessionRepositoryTrait for SessionRepository {
         let session_value_json = match serde_json::to_string(&session_in_store) {
             Ok(json) => json,
             Err(e) => {
-                return Err(ServerError::InternalError(e.to_string()));
+                return Err(ServerError::InternalError(e.into()));
             }
         };
 
@@ -58,11 +58,11 @@ impl SessionRepositoryTrait for SessionRepository {
 
         match result {
             Ok(()) => Ok(session),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
+            Err(e) => Err(ServerError::InternalError(e.into()))
         }
     }
 
-    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
+    async fn find_by_id(&self, session_id: &str, time_until_expiration: Option<usize>) -> Result<Session, ServerError> {
         let mut connection = self.connection.clone();
         let result: RedisResult<String> = match time_until_expiration {
             Some(time) => connection.get_ex(session_id, Expiry::EX(time)),
@@ -78,17 +78,17 @@ impl SessionRepositoryTrait for SessionRepository {
                         value.profile_id,
                         None,
                     ))
-                    .map_err(|e| ServerError::InternalError(e.to_string()))
+                    .map_err(|e| ServerError::InternalError(e.into()))
             }
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
+            Err(_) => Err(ServerError::ResourceNotFound)
         }
     }
 
-    async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>> {
+    async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError> {
         self.connection
             .clone()
             .del(session_id)
             .await
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }

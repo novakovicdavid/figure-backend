@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
+use anyhow::Error;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::traits::ProfileRepositoryTrait;
@@ -21,7 +22,7 @@ impl MockProfileRepository {
 
 #[async_trait]
 impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
-    async fn create(&self, _transaction: Option<&mut MockTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn create(&self, _transaction: Option<&mut MockTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError> {
         let mut db = self.db.lock().unwrap();
         let profile = Profile {
             id: db.len() as IdType,
@@ -36,21 +37,21 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
         Ok(profile)
     }
 
-    async fn find_by_id(&self, _transaction: Option<&mut MockTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_id(&self, _transaction: Option<&mut MockTransaction>, profile_id: IdType) -> Result<Profile, ServerError> {
         let db = self.db.lock().unwrap();
         db.iter().find(|profile| profile.id == profile_id)
             .cloned()
-            .ok_or_else(|| ServerError::InternalError(String::from("No profile found with email")))
+            .ok_or_else(|| ServerError::ResourceNotFound)
     }
 
-    async fn find_by_user_id(&self, _transaction: Option<&mut MockTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_user_id(&self, _transaction: Option<&mut MockTransaction>, user_id: IdType) -> Result<Profile, ServerError> {
         let db = self.db.lock().unwrap();
         db.iter().find(|profile| profile.user_id == user_id)
             .cloned()
-            .ok_or_else(|| ServerError::InternalError(String::from("No profile found with email")))
+            .ok_or_else(|| ServerError::ResourceNotFound)
     }
 
-    async fn update_profile_by_id(&self, _transaction: Option<&mut MockTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>> {
+    async fn update_profile_by_id(&self, _transaction: Option<&mut MockTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError> {
         let mut db = self.db.lock().unwrap();
         let position = match db.iter().position(|profile| profile.id == profile_id) {
             Some(position) => position,
@@ -58,7 +59,7 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
         };
         db.get(position)
             .cloned()
-            .ok_or_else(|| ServerError::InternalError(String::from("No profile found with email")))
+            .ok_or_else(|| ServerError::ResourceNotFound)
             .map(|mut profile| {
                 profile.display_name = display_name;
                 profile.bio = bio;
@@ -68,7 +69,7 @@ impl ProfileRepositoryTrait<MockTransaction> for MockProfileRepository {
             })
     }
 
-    async fn get_total_profiles_count(&self, _transaction: Option<&mut MockTransaction>) -> Result<IdType, ServerError<String>> {
+    async fn get_total_profiles_count(&self, _transaction: Option<&mut MockTransaction>) -> Result<IdType, ServerError> {
         Ok(self.db.lock().unwrap().len() as IdType)
     }
 }

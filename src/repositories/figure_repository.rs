@@ -24,7 +24,7 @@ impl FigureRepository {
 
 #[async_trait]
 impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
-    async fn create(&self, transaction: Option<&mut PostgresTransaction>, mut figure: Figure) -> Result<Figure, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, mut figure: Figure) -> Result<Figure, ServerError> {
         let query_string = iformat!(r#"
             INSERT INTO {FigureDef::Table}
             ({FigureDef::Id.as_str()}, {FigureDef::Title.as_str()}, {FigureDef::Description.as_str()},
@@ -33,6 +33,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)
             RETURNING {FigureDef::Id.as_str()};
             "#);
+
         let query =
             sqlx::query(&query_string)
                 .bind(figure.title.clone())
@@ -41,18 +42,20 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
                 .bind(figure.height)
                 .bind(figure.url.clone())
                 .bind(figure.profile_id);
+
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
         }
-            .map(|row| {
-                figure.id = row.get(0);
+            .and_then(|row| row.try_get(0))
+            .map(|id| {
+                figure.id = id;
                 figure
             })
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError<String>> {
+    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError> {
         let query_string = iformat!(r#"
             SELECT
             {FigureDef::Id} AS {FigureDef::Id.unique()}, {FigureDef::Title}, {FigureDef::Description},
@@ -66,14 +69,16 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             ON {FigureDef::ProfileId} = {ProfileDef::Id}
             WHERE {FigureDef::Id} = $1
             "#);
+
         let query = sqlx::query_as(&query_string).bind(figure_id);
+
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
-        }.map_err(|e| ServerError::InternalError(e.to_string()))
+        }.map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError<String>> {
+    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError> {
         let mut query_string = iformat!(r#"
             SELECT {FigureDef::Id} AS {FigureDef::Id.unique()}, {FigureDef::Title}, {FigureDef::Description}, {FigureDef::Url}, {FigureDef::Width}, {FigureDef::Height},
             {ProfileDef::Id} AS {ProfileDef::Id.unique()}, {ProfileDef::Username}, {ProfileDef::DisplayName}, {ProfileDef::Bio}, {ProfileDef::Banner}, {ProfileDef::ProfilePicture}, {ProfileDef::UserId}
@@ -112,24 +117,23 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
         "#);
 
         let query = sqlx::query_as::<_, FigureDTO>(&query_string);
-        let result = match transaction {
+
+        match transaction {
             Some(transaction) => query.fetch_all(transaction.inner()).await,
             None => query.fetch_all(&self.db).await
-        };
-
-        match result {
-            Ok(figures) => Ok(figures),
-            Err(Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
-        }
+        }.map_err(|e| match e {
+            Error::RowNotFound => ServerError::ResourceNotFound,
+            e => ServerError::InternalError(e.into())
+        })
     }
 
-    async fn update_figure(&self, transaction: Option<&mut PostgresTransaction>, figure: Figure) -> Result<(), ServerError<String>> {
+    async fn update_figure(&self, transaction: Option<&mut PostgresTransaction>, figure: Figure) -> Result<(), ServerError> {
         let query_string = iformat!(r#"
             UPDATE {FigureDef::Table}
             SET {FigureDef::Title} = $2, {FigureDef::Description} = $3, {FigureDef::Url} = $4, {FigureDef::Width} = $5, {FigureDef::Height} = $6
             WHERE {FigureDef::Id} = $1
             "#);
+
         let query =
             sqlx::query(&query_string)
                 .bind(figure.id)
@@ -138,15 +142,16 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
                 .bind(figure.url)
                 .bind(figure.width)
                 .bind(figure.height);
+
         match transaction {
             Some(transaction) => query.execute(transaction.inner()).await,
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn delete_figure_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(), ServerError<String>> {
+    async fn delete_figure_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(), ServerError> {
         let query_string = iformat!(r#"
             DELETE FROM {FigureDef::Table}
             WHERE {FigureDef::Id} = $1
@@ -159,10 +164,10 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn count_by_profile_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<IdType, ServerError<String>> {
+    async fn count_by_profile_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<IdType, ServerError> {
         let query_string = iformat!(r#"
         SELECT count(*) FROM {FigureDef::Table}
         where {FigureDef::ProfileId} = $1
@@ -175,10 +180,10 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn get_total_figures_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError<String>> {
+    async fn get_total_figures_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
         let query_string = iformat!(r#"
         SELECT count(*) FROM {FigureDef::Table}
         "#);
@@ -189,6 +194,6 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }

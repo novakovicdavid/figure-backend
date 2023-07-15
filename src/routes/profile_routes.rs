@@ -31,7 +31,7 @@ pub async fn get_profile<C: ContextTrait>(State(server_state): State<Arc<ServerS
 pub async fn get_total_profiles_count<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> Response {
     match server_state.context.service_context().profile_service().get_total_profiles_count().await {
         Ok(id) => id.to_string().into_response(),
-        Err(_) => ServerError::InternalError("Failed to get profile count".to_string()).into_response()
+        Err(e) => e.into_response()
     }
 }
 

@@ -24,7 +24,7 @@ impl ProfileRepository {
 
 #[async_trait]
 impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
-    async fn create(&self, transaction: Option<&mut PostgresTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError> {
         let query_string = iformat!(r#"
             INSERT INTO {ProfileDef::Table} ({ProfileDef::Username.as_str()}, {ProfileDef::UserId.as_str()})
             VALUES ($1, $2)
@@ -32,37 +32,35 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         let query = sqlx::query(&query_string)
             .bind(&username)
             .bind(user_id);
-        let query_result = match transaction {
+        match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
-        };
-
-        match query_result {
-            Ok(profile_id) => {
-                Ok(
-                    Profile {
-                        id: profile_id.get(0),
-                        username,
-                        display_name: None,
-                        bio: None,
-                        banner: None,
-                        profile_picture: None,
-                        user_id,
-                    }
-                )
-            }
-            Err(e) => {
-                match ServerError::parse_db_error(&e) {
-                    ServerError::ConstraintError => {
-                        Err(ServerError::UsernameAlreadyTaken)
-                    }
-                    _ => Err(ServerError::InternalError(e.to_string()))
-                }
-            }
         }
+            .and_then(|result| result.try_get(0))
+            .map(|profile_id| Profile {
+                id: profile_id,
+                username,
+                display_name: None,
+                bio: None,
+                banner: None,
+                profile_picture: None,
+                user_id,
+            })
+            .map_err(|e| {
+                match e {
+                    sqlx::Error::Database(e) => {
+                        // TODO don't hardcode this
+                        if e.constraint() == Some("username_key") {
+                            return ServerError::UsernameAlreadyTaken
+                        }
+                        ServerError::InternalError(e.into())
+                    }
+                    _ => ServerError::InternalError(e.into())
+                }
+            })
     }
 
-    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<Profile, ServerError> {
         let query_string = iformat!("SELECT * FROM {ProfileDef::Table} WHERE {ProfileDef::Id.as_str()} = $1");
         let query =
             sqlx::query_as::<_, Profile>(&query_string)
@@ -74,11 +72,11 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         match query_result {
             Ok(profile) => Ok(profile),
             Err(sqlx::Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
+            Err(e) => Err(ServerError::InternalError(e.into()))
         }
     }
 
-    async fn find_by_user_id(&self, transaction: Option<&mut PostgresTransaction>, user_id: IdType) -> Result<Profile, ServerError<String>> {
+    async fn find_by_user_id(&self, transaction: Option<&mut PostgresTransaction>, user_id: IdType) -> Result<Profile, ServerError> {
         let query_string = iformat!("SELECT * FROM {ProfileDef::Table} WHERE {ProfileDef::UserId.as_str()} = $1");
         let query =
             sqlx::query_as::<_, Profile>(&query_string)
@@ -90,11 +88,11 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         match query_result {
             Ok(profile) => Ok(profile),
             Err(sqlx::Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.to_string()))
+            Err(e) => Err(ServerError::InternalError(e.into()))
         }
     }
 
-    async fn update_profile_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError<String>> {
+    async fn update_profile_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError> {
         let query_string = iformat!(r#"
             UPDATE {ProfileDef::Table}
             SET {ProfileDef::DisplayName.as_str()} = $1, {ProfileDef::Bio.as_str()} = $2,
@@ -115,10 +113,10 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
-    async fn get_total_profiles_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError<String>> {
+    async fn get_total_profiles_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
         let query_string = iformat!("SELECT count(*) FROM {ProfileDef::Table}");
         let query = sqlx::query(&query_string);
         match transaction {
@@ -126,6 +124,6 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }

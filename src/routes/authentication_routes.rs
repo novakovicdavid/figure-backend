@@ -99,14 +99,12 @@ pub async fn load_session<C: ContextTrait>(State(server_state): State<Arc<Server
     if let Some(cookie) = cookies.get("session_id") {
         match server_state.context.repository_context().session_repository().find_by_id(cookie.value(), Some(86400)).await {
             Ok(session_data) => {
-                if let Ok(profile) = server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id()).await {
-                    return ProfileDTO::from(profile).to_json().into_response();
-                }
-                ServerError::ResourceNotFound.into_response()
+                server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id())
+                    .await
+                    .map(|profile| ProfileDTO::from(profile).to_json())
+                    .into_response()
             }
-            Err(_e) => {
-                ServerError::NoSessionFound.into_response()
-            }
+            Err(e) => e.into_response()
         }
     } else {
         ServerError::NoSessionReceived.into_response()

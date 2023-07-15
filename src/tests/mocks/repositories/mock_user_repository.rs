@@ -21,7 +21,7 @@ impl MockUserRepository {
 
 #[async_trait]
 impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
-    async fn create(&self, _transaction: Option<&mut MockTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
+    async fn create(&self, _transaction: Option<&mut MockTransaction>, email: String, password_hash: String) -> Result<User, ServerError> {
         let mut db = self.db.lock().unwrap();
         let user = User {
             id: db.len() as IdType,
@@ -33,17 +33,17 @@ impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
         Ok(user)
     }
 
-    async fn find_one_by_email(&self, _transaction: Option<&mut MockTransaction>, email: String) -> Result<User, ServerError<String>> {
+    async fn find_one_by_email(&self, _transaction: Option<&mut MockTransaction>, email: String) -> Result<User, ServerError> {
         let db = self.db.lock().unwrap();
         db.iter().find(|user| user.email == email)
             .cloned()
-            .ok_or_else(|| ServerError::InternalError(String::from("No user found with email")))
+            .ok_or_else(|| ServerError::ResourceNotFound)
     }
 
-    async fn find_one_by_id(&self, _transaction: Option<&mut MockTransaction>, id: IdType) -> Result<User, ServerError<String>> {
+    async fn find_one_by_id(&self, _transaction: Option<&mut MockTransaction>, id: IdType) -> Result<User, ServerError> {
         let db = self.db.lock().unwrap();
         db.iter().find(|user| user.id == id)
             .cloned()
-            .ok_or_else(|| ServerError::InternalError(String::from("No user found with id")))
+            .ok_or_else(|| ServerError::ResourceNotFound)
     }
 }

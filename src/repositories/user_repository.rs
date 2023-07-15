@@ -22,7 +22,7 @@ impl UserRepository {
 
 #[async_trait]
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
-    async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError<String>> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
             INSERT INTO {UserDef::Table} ({UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()})
             VALUES ($1, $2, 'user')
@@ -30,29 +30,33 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
         let query = sqlx::query(&query_string)
             .bind(email.to_lowercase())
             .bind(&password_hash);
-        let query_result = match transaction {
+        match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
-        };
-
-        match query_result {
-            Ok(user_id) =>
-                Ok(User {
-                    email,
-                    password: password_hash,
-                    role: "user".to_string(),
-                    id: user_id.get(0),
-                }),
-            Err(e) => match ServerError::parse_db_error(&e) {
-                ServerError::ConstraintError => {
-                    Err(ServerError::EmailAlreadyInUse)
-                }
-                _ => Err(ServerError::InternalError(e.to_string()))
-            }
         }
+            .and_then(|result| result.try_get(0))
+            .map(|user_id|
+                 User {
+                     email,
+                     password: password_hash,
+                     role: "user".to_string(),
+                     id: user_id,
+                 })
+            .map_err(|e| {
+                match e {
+                    sqlx::Error::Database(e) => {
+                        // TODO don't hardcode this
+                        if e.constraint() == Some("email_key") {
+                            return ServerError::EmailAlreadyInUse
+                        }
+                        ServerError::InternalError(e.into())
+                    }
+                    _ => ServerError::InternalError(e.into())
+                }
+            })
     }
 
-    async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError<String>> {
+    async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
         SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
         FROM {UserDef::Table}
@@ -70,7 +74,7 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
         })
     }
 
-    async fn find_one_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError<String>> {
+    async fn find_one_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
         SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
         FROM {UserDef::Table}

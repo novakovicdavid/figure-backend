@@ -20,10 +20,10 @@ impl PostgresTransactionCreator {
 
 #[async_trait]
 impl TransactionCreatorTrait<PostgresTransaction> for PostgresTransactionCreator {
-    async fn create(&self) -> Result<PostgresTransaction, ServerError<String>> {
+    async fn create(&self) -> Result<PostgresTransaction, ServerError> {
         self.db.begin().await
             .map(PostgresTransaction::new)
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }
 
@@ -44,9 +44,9 @@ impl PostgresTransaction {
 #[async_trait]
 impl TransactionTrait for PostgresTransaction {
     type Inner = Transaction<'static, Postgres>;
-    async fn commit(self) -> Result<(), ServerError<String>> {
+    async fn commit(self) -> Result<(), ServerError> {
         self.transaction.commit().await
-            .map_err(|e| ServerError::InternalError(e.to_string()))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     fn inner(&mut self) -> &mut Self::Inner {

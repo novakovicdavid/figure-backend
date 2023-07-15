@@ -19,13 +19,13 @@ impl MockSessionRepository {
 
 #[async_trait]
 impl SessionRepositoryTrait for MockSessionRepository {
-    async fn create(&self, session: Session) -> Result<Session, ServerError<String>> {
+    async fn create(&self, session: Session) -> Result<Session, ServerError> {
         let mut db = self.connection.lock().unwrap();
         db.push(session.clone());
         Ok(session)
     }
 
-    async fn find_by_id(&self, session_id: &str, _time_until_expiration: Option<usize>) -> Result<Session, ServerError<String>> {
+    async fn find_by_id(&self, session_id: &str, _time_until_expiration: Option<usize>) -> Result<Session, ServerError> {
         let db = self.connection.lock().unwrap();
         match db.iter().find(|session| session.get_id() == session_id) {
             Some(session) => Ok(session.clone()),
@@ -33,7 +33,7 @@ impl SessionRepositoryTrait for MockSessionRepository {
         }
     }
 
-    async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError<String>> {
+    async fn remove_by_id(&self, session_id: &str) -> Result<(), ServerError> {
         let mut db = self.connection.lock().unwrap();
         match db.iter().position(|session| session.get_id() == session_id) {
             Some(position) => {

@@ -66,7 +66,7 @@ pub async fn landing_page_figures<C: ContextTrait>(State(server_state): State<Ar
 pub async fn get_total_figures_count<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> Response {
     match server_state.context.service_context().figure_service().get_total_figures_count().await {
         Ok(id) => id.to_string().into_response(),
-        Err(_) => ServerError::InternalError("Failed to get figure count".to_string()).into_response()
+        Err(e) => e.into_response()
     }
 }
 
@@ -79,7 +79,7 @@ pub async fn upload_figure<C: ContextTrait>(session: Extension<SessionOption>, S
     let result = parse_multipart(multipart).await;
     let (title, description, image, width, height) = match result {
         Ok(tuple) => tuple,
-        Err(_) => {
+        Err(e) => {
             return ServerError::InvalidMultipart.into_response();
         }
     };
@@ -97,13 +97,9 @@ pub async fn upload_figure<C: ContextTrait>(session: Extension<SessionOption>, S
 pub async fn get_total_figures_by_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, Path(id): Path<IdType>) -> Response {
     match server_state.context.service_context().figure_service().get_total_figures_by_profile(id).await {
         Ok(total) => total.to_string().into_response(),
-        Err(_) => ServerError::InternalError(format!("Could not get total figures for {}", id)).into_response()
+        Err(e) => e.into_response()
     }
 }
-
-// fn figure_url_from_name(base_url: String, name: String) -> String {
-//     format!("{}{}", base_url, name)
-// }
 
 async fn parse_multipart(mut multipart: Multipart) -> Result<(String, Option<String>, Bytes, u32, u32), anyhow::Error> {
     let mut title: Option<String> = None;
