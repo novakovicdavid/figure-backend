@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 use async_trait::async_trait;
 use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Algorithm::Argon2id;
@@ -99,7 +100,7 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
         let parsed_hash = match PasswordHash::new(&user.password) {
             Ok(hash) => hash,
             Err(e) => {
-                return Err(ServerError::InternalError(e.into()));
+                return Err(ServerError::InternalError(Arc::new(e.into())));
             }
         };
         if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_err() {
@@ -107,8 +108,8 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
         }
         let profile = match self.profile_repository.find_by_user_id(None, user.id).await {
             Ok(profile) => profile,
-            Err(e) => return Err(ServerError::InternalError(anyhow::Error::from(e)
-                .context(iformat!("Profile associated with user (id: {user.id}) not found.")))),
+            Err(e) => return Err(ServerError::InternalError(Arc::new(anyhow::Error::from(e)
+                .context(iformat!("Profile associated with user (id: {user.id}) not found."))))),
         };
 
         let session = self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.id, profile.id, Some(86400))).await?;
@@ -144,13 +145,13 @@ pub fn hash_password(password: &str, with_checks: bool) -> Result<String, Server
     let argon2_params = match Params::new(8192, 5, 1, Some(32)) {
         Ok(argon2_params) => argon2_params,
         Err(e) => {
-            return Err(ServerError::InternalError(e.into()));
+            return Err(ServerError::InternalError(Arc::new(e.into())));
         }
     };
     let password_hash = match Argon2::new(Argon2id, argon2::Version::V0x13, argon2_params).hash_password(password.as_ref(), &password_salt) {
         Ok(password_hash) => password_hash,
         Err(e) => {
-            return Err(ServerError::InternalError(e.into()));
+            return Err(ServerError::InternalError(Arc::new(e.into())));
         }
     };
     Ok(password_hash.to_string())

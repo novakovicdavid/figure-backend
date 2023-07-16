@@ -1,5 +1,6 @@
 use serde::{Serialize};
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
@@ -22,7 +23,7 @@ pub enum ServerError {
     MissingFieldInForm,
     InvalidMultipart,
     ImageDimensionsTooLarge,
-    InternalError(anyhow::Error),
+    InternalError(Arc<anyhow::Error>),
 }
 
 #[derive(Serialize)]
@@ -48,7 +49,11 @@ impl Display for ServerError {
             ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
             ServerError::InternalError(error) => {
-                error!("Internal server error: {}\n{}", error, error.backtrace());
+                let error = error.clone();
+                tokio::task::spawn(async move {
+                    error!("Internal server error: {}\n{}", error, error.backtrace());
+                });
+
                 "internal-server-error"
             }
         };

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use sqlx::{Error, Pool, Postgres, Row};
 use crate::server_errors::ServerError;
 use async_trait::async_trait;
@@ -52,7 +53,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
                 figure.id = id;
                 figure
             })
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<FigureDTO, ServerError> {
@@ -75,7 +76,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
-        }.map_err(|e| ServerError::InternalError(e.into()))
+        }.map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError> {
@@ -123,7 +124,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_all(&self.db).await
         }.map_err(|e| match e {
             Error::RowNotFound => ServerError::ResourceNotFound,
-            e => ServerError::InternalError(e.into())
+            e => ServerError::InternalError(Arc::new(e.into()))
         })
     }
 
@@ -148,7 +149,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn delete_figure_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(), ServerError> {
@@ -164,7 +165,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn count_by_profile_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<IdType, ServerError> {
@@ -180,7 +181,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn get_total_figures_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
@@ -194,6 +195,6 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 }

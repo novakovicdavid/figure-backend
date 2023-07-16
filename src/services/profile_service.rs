@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
@@ -41,14 +42,14 @@ impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
             banner_url = self.storage.upload_image(url.as_str(), banner)
                 .await
                 .map(Some)
-                .map_err(|e| ServerError::InternalError(e.into()))?;
+                .map_err(|e| ServerError::InternalError(Arc::new(e.into())))?;
         }
         if let Some(profile_picture) = profile_picture {
             let url = format!("profile_pictures/{}", Uuid::new_v4());
             profile_picture_url = self.storage.upload_image(url.as_str(), profile_picture)
                 .await
                 .map(Some)
-                .map_err(|e| ServerError::InternalError(e.into()))?;
+                .map_err(|e| ServerError::InternalError(Arc::new(e.into())))?;
         }
         self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
     }

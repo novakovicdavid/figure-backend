@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
 use crate::entities::profile::{Profile, ProfileDef};
@@ -51,9 +52,9 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
                         if e.constraint() == Some("profile_username_uindex") {
                             return ServerError::UsernameAlreadyTaken
                         }
-                        ServerError::InternalError(e.into())
+                        ServerError::InternalError(Arc::new(e.into()))
                     }
-                    _ => ServerError::InternalError(e.into())
+                    _ => ServerError::InternalError(Arc::new(e.into()))
                 }
             })
     }
@@ -70,7 +71,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         match query_result {
             Ok(profile) => Ok(profile),
             Err(sqlx::Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.into()))
+            Err(e) => Err(ServerError::InternalError(Arc::new(e.into())))
         }
     }
 
@@ -86,7 +87,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
         match query_result {
             Ok(profile) => Ok(profile),
             Err(sqlx::Error::RowNotFound) => Err(ServerError::ResourceNotFound),
-            Err(e) => Err(ServerError::InternalError(e.into()))
+            Err(e) => Err(ServerError::InternalError(Arc::new(e.into())))
         }
     }
 
@@ -111,7 +112,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     async fn get_total_profiles_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
@@ -122,6 +123,6 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 }

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Transaction};
 use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
@@ -21,7 +22,7 @@ impl TransactionCreatorTrait<PostgresTransaction> for PostgresTransactionCreator
     async fn create(&self) -> Result<PostgresTransaction, ServerError> {
         self.db.begin().await
             .map(PostgresTransaction::new)
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 }
 
@@ -42,7 +43,7 @@ impl TransactionTrait for PostgresTransaction {
     type Inner = Transaction<'static, Postgres>;
     async fn commit(self) -> Result<(), ServerError> {
         self.transaction.commit().await
-            .map_err(|e| ServerError::InternalError(e.into()))
+            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     fn inner(&mut self) -> &mut Self::Inner {

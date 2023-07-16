@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
 use crate::entities::user::{User, UserDef};
@@ -49,9 +50,9 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
                         if e.constraint() == Some("user_email_uindex") {
                             return ServerError::EmailAlreadyInUse
                         }
-                        ServerError::InternalError(e.into())
+                        ServerError::InternalError(Arc::new(e.into()))
                     }
-                    _ => ServerError::InternalError(e.into())
+                    _ => ServerError::InternalError(Arc::new(e.into()))
                 }
             })
     }
