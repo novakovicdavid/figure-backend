@@ -8,7 +8,6 @@ mod services;
 mod repositories;
 mod context;
 mod utilities;
-mod config;
 
 use std::env;
 use std::net::SocketAddr;
