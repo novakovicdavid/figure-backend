@@ -79,7 +79,7 @@ pub async fn upload_figure<C: ContextTrait>(session: Extension<SessionOption>, S
     let result = parse_multipart(multipart).await;
     let (title, description, image, width, height) = match result {
         Ok(tuple) => tuple,
-        Err(e) => {
+        Err(_e) => {
             return ServerError::InvalidMultipart.into_response();
         }
     };

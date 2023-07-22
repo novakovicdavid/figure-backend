@@ -1,4 +1,3 @@
-use anyhow::Error;
 use async_trait::async_trait;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::session_dtos::Session;

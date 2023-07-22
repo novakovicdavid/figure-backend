@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
-use anyhow::Error;
 use crate::entities::profile::Profile;
 use crate::entities::types::IdType;
 use crate::repositories::traits::ProfileRepositoryTrait;
