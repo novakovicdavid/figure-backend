@@ -7,7 +7,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 use url::Url;
 use interpol::format as iformat;
 
-pub fn init_logging() -> Result<(), anyhow::Error> {
+pub fn init_logging(host: String) -> Result<(), anyhow::Error> {
     // Initialize logging
     let registry = tracing_subscriber::registry();
 
@@ -15,7 +15,7 @@ pub fn init_logging() -> Result<(), anyhow::Error> {
 
     let (loki_layer, loki_task) = if let Ok(loki_url) = env::var("LOKI_URL") {
         let (loki_logging, task) = tracing_loki::builder()
-            .label("host", "test")?
+            .label("host", host)?
             .extra_field("pid", iformat!("{process::id()}"))?
             .build_url(Url::parse(&loki_url)?)?;
 

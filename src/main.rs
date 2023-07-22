@@ -65,7 +65,7 @@ impl<C: ContextTrait> ServerState<C> {
 async fn main() -> anyhow::Result<(), anyhow::Error> {
     let time_to_start = Instant::now();
 
-    init_logging().expect("Failed to initialize logging!");
+    init_logging(env::var("LOKI_HOST")?).expect("Failed to initialize logging!");
 
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     info!("Connecting to database...");

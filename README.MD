@@ -22,6 +22,8 @@ Optional:
 
 LOKI_URL: Endpoint of Loki (without /loki/api/v1/push)
 
+LOKI_HOST: Name of the instance of the running backend
+
 ***
 
 ### License
