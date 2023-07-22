@@ -18,6 +18,10 @@ S3_REGION: Region of S3 endpoint (eu-central-003)
 
 S3_BASE_STORAGE_URL: Base url of S3 objects (https://.../ with slash at the end)
 
+Optional:
+
+LOKI_URL: Endpoint of Loki (without /loki/api/v1/push)
+
 ***
 
 ### License

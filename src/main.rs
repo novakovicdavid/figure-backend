@@ -8,6 +8,7 @@ mod services;
 mod repositories;
 mod context;
 mod utilities;
+mod config;
 
 use std::env;
 use std::net::SocketAddr;
@@ -26,7 +27,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use url::Url;
-use tracing::{info, Level};
+use tracing::info;
 use crate::auth_layer::authenticate;
 use crate::content_store::S3Storage;
 use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext};
@@ -43,6 +44,7 @@ use crate::routes::profile_routes::{get_profile, get_total_profiles_count, updat
 use crate::services::figure_service::FigureService;
 use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
+use crate::utilities::logging::init_logging;
 use crate::utilities::secure_rand_generator::ChaCha20;
 
 pub struct ServerState<C: ContextTrait> {
@@ -63,11 +65,7 @@ impl<C: ContextTrait> ServerState<C> {
 async fn main() -> anyhow::Result<(), anyhow::Error> {
     let time_to_start = Instant::now();
 
-    // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::WARN)
-        .with_env_filter("figure_backend=info")
-        .init();
+    init_logging().expect("Failed to initialize logging!");
 
     let database_url = env::var("DATABASE_URL").expect("No DATABASE_URL env found");
     info!("Connecting to database...");
