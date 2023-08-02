@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Transaction};
+use sqlx::{PgConnection, Pool, Postgres, Transaction};
 use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
@@ -40,13 +40,13 @@ impl PostgresTransaction {
 
 #[async_trait]
 impl TransactionTrait for PostgresTransaction {
-    type Inner = Transaction<'static, Postgres>;
+    type Inner = PgConnection;
     async fn commit(self) -> Result<(), ServerError> {
         self.transaction.commit().await
             .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
     }
 
     fn inner(&mut self) -> &mut Self::Inner {
-        &mut self.transaction
+        &mut *self.transaction
     }
 }
