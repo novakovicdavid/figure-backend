@@ -48,14 +48,7 @@ impl Display for ServerError {
             ServerError::MissingFieldInForm => "missing-field-in-form",
             ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
-            ServerError::InternalError(error) => {
-                let error = error.clone();
-                tokio::task::spawn(async move {
-                    error!("Internal server error: {}\n{}", error, error.backtrace());
-                });
-
-                "internal-server-error"
-            }
+            ServerError::InternalError(_) => "internal-server-error"
         };
         write!(f, "{}", message)
     }
@@ -63,7 +56,7 @@ impl Display for ServerError {
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
-        let status_code = match self {
+        let status_code = match &self {
             ServerError::InvalidEmail => StatusCode::BAD_REQUEST,
             ServerError::InvalidUsername => StatusCode::BAD_REQUEST,
             ServerError::PasswordTooShort => StatusCode::BAD_REQUEST,
@@ -78,7 +71,13 @@ impl IntoResponse for ServerError {
             ServerError::MissingFieldInForm => StatusCode::BAD_REQUEST,
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
-            ServerError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::InternalError(error) => {
+                let error = error.clone();
+                tokio::task::spawn(async move {
+                    error!("Internal server error: {}\n{}", error, error.backtrace());
+                });
+                StatusCode::INTERNAL_SERVER_ERROR
+            },
         };
         (
             status_code,
