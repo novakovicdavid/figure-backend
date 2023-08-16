@@ -10,7 +10,7 @@ use image::GenericImageView;
 use serde_json::json;
 use crate::context::{ContextTrait, ServiceContextTrait};
 use crate::entities::dtos::session_dtos::SessionOption;
-use crate::entities::types::IdType;
+use crate::domain::models::types::IdType;
 use crate::server_errors::ServerError;
 use crate::ServerState;
 use crate::services::traits::FigureServiceTrait;

@@ -2,7 +2,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Expiry, RedisResult};
-use crate::entities::types::IdType;
+use crate::domain::models::types::IdType;
 use serde::{Serialize, Deserialize};
 use crate::entities::dtos::session_dtos::Session;
 use crate::repositories::traits::SessionRepositoryTrait;

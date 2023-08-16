@@ -1,8 +1,9 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
-use crate::entities::profile::{Profile, ProfileDef};
-use crate::entities::types::IdType;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
+use crate::infrastructure::models::profile::ProfileDef;
 use crate::server_errors::ServerError;
 use interpol::format as iformat;
 use crate::repositories::traits::{ProfileRepositoryTrait, TransactionTrait};
@@ -23,28 +24,19 @@ impl ProfileRepository {
 
 #[async_trait]
 impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
-    async fn create(&self, transaction: Option<&mut PostgresTransaction>, username: String, user_id: IdType) -> Result<Profile, ServerError> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, profile: Profile) -> Result<Profile, ServerError> {
         let query_string = iformat!(r#"
             INSERT INTO {ProfileDef::Table} ({ProfileDef::Username.as_str()}, {ProfileDef::UserId.as_str()})
             VALUES ($1, $2)
-            RETURNING {ProfileDef::Id.as_str()}"#);
-        let query = sqlx::query(&query_string)
-            .bind(&username)
-            .bind(user_id);
+            RETURNING {ProfileDef::Id.as_str()}, {ProfileDef::Username.as_str()}, {ProfileDef::UserId.as_str()}"#);
+        let query = sqlx::query_as::<_, Profile>(&query_string)
+            .bind(profile.get_username())
+            .bind(profile.get_user_id());
+
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
         }
-            .and_then(|result| result.try_get(0))
-            .map(|profile_id| Profile {
-                id: profile_id,
-                username,
-                display_name: None,
-                bio: None,
-                banner: None,
-                profile_picture: None,
-                user_id,
-            })
             .map_err(|e| {
                 match e {
                     sqlx::Error::Database(e) => {

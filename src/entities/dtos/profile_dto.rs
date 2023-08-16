@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::json;
-use crate::entities::profile::Profile;
-use crate::entities::types::IdType;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
 
 #[derive(Serialize, Debug, PartialEq)]
 pub struct ProfileDTO {
@@ -41,9 +41,9 @@ pub fn to_json(profile: &impl Serialize) -> String {
 impl From<Profile> for ProfileDTO {
     fn from(profile: Profile) -> Self {
         Self {
-            id: profile.id,
-            username: profile.username,
-            display_name: profile.display_name,
+            id: profile.get_id(),
+            username: profile.get_username().to_string(),
+            display_name: profile.get_display_name().clone(),
         }
     }
 }
@@ -51,12 +51,12 @@ impl From<Profile> for ProfileDTO {
 impl From<Profile> for ProfileWithoutUserIdDTO {
     fn from(profile: Profile) -> Self {
         Self {
-            id: profile.id,
-            username: profile.username,
-            display_name: profile.display_name,
-            bio: profile.bio,
-            banner: profile.banner,
-            profile_picture: profile.profile_picture,
+            id: profile.get_id(),
+            username: profile.get_username().to_string(),
+            display_name: profile.get_display_name().clone(),
+            bio: profile.get_bio().clone(),
+            banner: profile.get_banner().clone(),
+            profile_picture: profile.get_profile_picture().clone(),
 
         }
     }

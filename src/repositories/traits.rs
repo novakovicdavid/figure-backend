@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::session_dtos::Session;
-use crate::entities::figure::Figure;
-use crate::entities::profile::Profile;
-use crate::entities::types::IdType;
-use crate::entities::user::User;
+use crate::domain::models::figure::Figure;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
+use crate::domain::models::user::User;
 use crate::server_errors::ServerError;
 
 #[async_trait]
-pub trait TransactionCreatorTrait<T: TransactionTrait>: Send + Sync {
+pub trait TransactionManagerTrait<T: TransactionTrait>: Send + Sync {
     async fn create(&self) -> Result<T, ServerError>;
 }
 
@@ -21,14 +21,14 @@ pub trait TransactionTrait: Send + Sync {
 
 #[async_trait]
 pub trait UserRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
-    async fn create(&self, transaction: Option<&mut T>, email: String, password_hash: String) -> Result<User, ServerError>;
+    async fn create(&self, transaction: Option<&mut T>, user: User) -> Result<User, ServerError>;
     async fn find_one_by_email(&self, transaction: Option<&mut T>, email: String) -> Result<User, ServerError>;
-    async fn find_one_by_id(&self, transaction: Option<&mut T>, id: IdType) -> Result<User, ServerError>;
+    async fn find_by_id(&self, transaction: Option<&mut T>, id: IdType) -> Result<User, ServerError>;
 }
 
 #[async_trait]
 pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
-    async fn create(&self, transaction: Option<&mut T>, username: String, user_id: IdType) -> Result<Profile, ServerError>;
+    async fn create(&self, transaction: Option<&mut T>, profile: Profile) -> Result<Profile, ServerError>;
     async fn find_by_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<Profile, ServerError>;
     async fn find_by_user_id(&self, transaction: Option<&mut T>, user_id: IdType) -> Result<Profile, ServerError>;
     async fn update_profile_by_id(&self, transaction: Option<&mut T>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError>;

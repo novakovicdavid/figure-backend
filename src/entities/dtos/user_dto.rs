@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::json;
-use crate::entities::types::IdType;
-use crate::entities::user::User;
+use crate::domain::models::types::IdType;
+use crate::domain::models::user::User;
 
 #[derive(Serialize, Debug)]
 pub struct UserDTO {
@@ -21,9 +21,9 @@ impl UserDTO {
 impl From<User> for UserDTO {
     fn from(user: User) -> Self {
         Self {
-            email: user.email,
-            role: user.role,
-            id: user.id,
+            email: user.get_email().to_string(),
+            role: user.get_role().to_string(),
+            id: user.get_id(),
         }
     }
 }

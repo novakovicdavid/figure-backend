@@ -12,17 +12,14 @@ use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::Session;
-use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
+use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait, TransactionManagerTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::UserServiceTrait;
 use crate::utilities::traits::RandomNumberGenerator;
 use interpol::format as iformat;
+use tracing::warn;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::user::User;
 
-lazy_static! {
-    static ref EMAIL_REGEX: Regex =
-    Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();
-    static ref USERNAME_REGEX: Regex =
-    Regex::new("^[a-zA-Z0-9]+-*[a-zA-Z0-9]+?$").unwrap();
-}
 
 #[derive(Clone)]
 pub struct UserService<TC, T, U, P, S, R> {
@@ -37,7 +34,7 @@ pub struct UserService<TC, T, U, P, S, R> {
 
 impl<TC, T, U, P, S, R> UserService<TC, T, U, P, S, R>
     where
-        TC: TransactionCreatorTrait<T>,
+        TC: TransactionManagerTrait<T>,
         T: TransactionTrait,
         U: UserRepositoryTrait<T>,
         P: ProfileRepositoryTrait<T>,
@@ -58,17 +55,10 @@ impl<TC, T, U, P, S, R> UserService<TC, T, U, P, S, R>
 
 #[async_trait]
 impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
-    where TC: TransactionCreatorTrait<T>, T: TransactionTrait,
+    where TC: TransactionManagerTrait<T>, T: TransactionTrait,
           U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait,
           R: RandomNumberGenerator {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError> {
-        if !is_email_valid(&email) {
-            return Err(ServerError::InvalidEmail);
-        }
-        if !is_username_valid(&username) {
-            return Err(ServerError::InvalidUsername);
-        }
-
         let password_hash_result = hash_password(&password, true);
         let password_hash = match password_hash_result {
             Ok(hash) => hash,
@@ -76,14 +66,19 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
         };
 
         let mut transaction = self.transaction_creator.create().await?;
-        let user = self.user_repository.create(Some(&mut transaction), email, password_hash).await?;
-        let profile = self.profile_repository.create(Some(&mut transaction), username, user.id).await?;
+
+        let user = User::new(0, email, password_hash, "user".to_string())?;
+        let user = self.user_repository.create(Some(&mut transaction), user).await?;
+
+        let profile = Profile::new(0, username, None, None, None, None, user.get_id())?;
+        let profile = self.profile_repository.create(Some(&mut transaction), profile).await?;
+
         transaction.commit().await?;
 
         let session = Session::new(
             self.secure_random_generator.generate()?.to_string(),
-            user.id,
-            profile.id,
+            user.get_id(),
+            profile.get_id(),
             Some(86400),
         );
 
@@ -97,7 +92,7 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
         };
 
-        let parsed_hash = match PasswordHash::new(&user.password) {
+        let parsed_hash = match PasswordHash::new(&user.get_password()) {
             Ok(hash) => hash,
             Err(e) => {
                 return Err(ServerError::InternalError(Arc::new(e.into())));
@@ -106,28 +101,15 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
         if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_err() {
             return Err(ServerError::WrongPassword);
         }
-        let profile = match self.profile_repository.find_by_user_id(None, user.id).await {
+        let profile = match self.profile_repository.find_by_user_id(None, user.get_id()).await {
             Ok(profile) => profile,
             Err(e) => return Err(ServerError::InternalError(Arc::new(anyhow::Error::from(e)
-                .context(iformat!("Profile associated with user (id: {user.id}) not found."))))),
+                .context(iformat!("Profile associated with user (id: {user.get_id()}) not found."))))),
         };
 
-        let session = self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.id, profile.id, Some(86400))).await?;
+        let session = self.session_repository.create(Session::new(self.secure_random_generator.generate()?.to_string(), user.get_id(), profile.get_id(), Some(86400))).await?;
         Ok((ProfileDTO::from(profile), session))
     }
-}
-
-// Valid email test (OWASP Regex + maximum length of 60 graphemes
-fn is_email_valid(email: &str) -> bool {
-    let email_count = email.graphemes(true).count();
-    EMAIL_REGEX.is_match(email) && (3..=60).contains(&email_count)
-}
-
-// Valid username test
-// (alphanumerical, optionally a dash surrounded by alphanumerical characters, 15 character limit)
-fn is_username_valid(username: &str) -> bool {
-    let username_count = username.graphemes(true).count();
-    USERNAME_REGEX.is_match(username) && (3..=15).contains(&username_count)
 }
 
 pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError> {

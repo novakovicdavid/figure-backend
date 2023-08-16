@@ -11,7 +11,7 @@ use crate::context::{ContextTrait, RepositoryContextTrait, ServiceContextTrait};
 use crate::ServerState;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::{Session, SessionOption};
-use crate::entities::types::IdType;
+use crate::domain::models::types::IdType;
 use crate::repositories::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
 use crate::services::traits::{ProfileServiceTrait, UserServiceTrait};

@@ -1,16 +1,8 @@
 use std::fmt::{Display, Formatter};
-use serde::{Serialize};
-use crate::entities::profile::Profile;
-use crate::entities::types::IdType;
-
-#[derive(Serialize, Debug, Clone, PartialEq, sqlx::FromRow)]
-pub struct User {
-    #[sqlx(rename = "user_id")]
-    pub id: IdType,
-    pub email: String,
-    pub password: String,
-    pub role: String,
-}
+use sqlx::{Error, FromRow, Row};
+use sqlx::postgres::PgRow;
+use crate::domain::models::types::IdType;
+use crate::domain::models::user::User;
 
 pub enum UserDef {
     Table,
@@ -55,12 +47,14 @@ impl Display for UserDef {
     }
 }
 
+impl FromRow<'_, PgRow> for User {
+    fn from_row(row: &PgRow) -> Result<Self, Error> {
+        let id: IdType = row.try_get(UserDef::Id.unique())
+            .or_else(|_| row.try_get(UserDef::Id.as_str()))?;
+        let email: String = row.try_get(UserDef::Email.as_str())?;
+        let password: String = row.try_get(UserDef::Password.as_str())?;
+        let role: String = row.try_get(UserDef::Role.as_str())?;
 
-
-#[derive(Serialize, Debug, sqlx::FromRow)]
-pub struct UserAndProfileFromQuery {
-    #[sqlx(flatten)]
-    pub user: User,
-    #[sqlx(flatten)]
-    pub profile: Profile,
+        Ok(User::new_raw(id, email, password, role))
+    }
 }

@@ -1,19 +1,8 @@
 use std::fmt::{Display, Formatter};
-use serde::Serialize;
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
-use crate::entities::types::IdType;
-
-#[derive(Serialize, Debug, Clone, PartialEq)]
-pub struct Profile {
-    pub id: IdType,
-    pub username: String,
-    pub display_name: Option<String>,
-    pub bio: Option<String>,
-    pub banner: Option<String>,
-    pub profile_picture: Option<String>,
-    pub user_id: IdType,
-}
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
 
 pub enum ProfileDef {
     Table,
@@ -78,14 +67,14 @@ impl FromRow<'_, PgRow> for Profile {
         let bio: Option<String> = row.try_get(ProfileDef::Bio.as_str())?;
         let banner: Option<String> = row.try_get(ProfileDef::Banner.as_str())?;
 
-        Ok(Profile {
+        Ok(Profile::new_raw(
             id,
             username,
             display_name,
-            profile_picture,
             bio,
-            user_id,
             banner,
-        })
+            profile_picture,
+            user_id,
+        ))
     }
 }

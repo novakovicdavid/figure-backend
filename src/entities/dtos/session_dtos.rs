@@ -1,4 +1,4 @@
-use crate::entities::types::IdType;
+use crate::domain::models::types::IdType;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Session {

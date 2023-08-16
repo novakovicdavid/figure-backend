@@ -1,10 +1,11 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
-use crate::entities::user::{User, UserDef};
+use crate::domain::models::user::User;
+use crate::infrastructure::models::user::UserDef;
 use crate::server_errors::ServerError;
 use interpol::format as iformat;
-use crate::entities::types::IdType;
+use crate::domain::models::types::IdType;
 use crate::repositories::traits::{TransactionTrait, UserRepositoryTrait};
 use crate::repositories::transaction::PostgresTransaction;
 
@@ -23,26 +24,19 @@ impl UserRepository {
 
 #[async_trait]
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
-    async fn create(&self, transaction: Option<&mut PostgresTransaction>, email: String, password_hash: String) -> Result<User, ServerError> {
+    async fn create(&self, transaction: Option<&mut PostgresTransaction>, user: User) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
             INSERT INTO {UserDef::Table} ({UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()})
             VALUES ($1, $2, 'user')
-            RETURNING {UserDef::Id.as_str()}"#);
-        let query = sqlx::query(&query_string)
-            .bind(email.to_lowercase())
-            .bind(&password_hash);
+            RETURNING {UserDef::Id.as_str()}, {UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()}"#);
+        let query = sqlx::query_as::<_, User>(&query_string)
+            .bind(user.get_email())
+            .bind(user.get_password());
+
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
             None => query.fetch_one(&self.db).await
         }
-            .and_then(|result| result.try_get(0))
-            .map(|user_id|
-                 User {
-                     email,
-                     password: password_hash,
-                     role: "user".to_string(),
-                     id: user_id,
-                 })
             .map_err(|e| {
                 match e {
                     sqlx::Error::Database(e) => {
@@ -75,7 +69,7 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
         })
     }
 
-    async fn find_one_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError> {
+    async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
         SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
         FROM {UserDef::Table}

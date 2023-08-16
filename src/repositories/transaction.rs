@@ -1,15 +1,15 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{PgConnection, Pool, Postgres, Transaction};
-use crate::repositories::traits::{TransactionCreatorTrait, TransactionTrait};
+use crate::repositories::traits::{TransactionManagerTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]
-pub struct PostgresTransactionCreator {
+pub struct PostgresTransactionManager {
     db: Pool<Postgres>
 }
 
-impl PostgresTransactionCreator {
+impl PostgresTransactionManager {
     pub fn new(db: Pool<Postgres>) -> Self {
         Self {
             db
@@ -18,7 +18,7 @@ impl PostgresTransactionCreator {
 }
 
 #[async_trait]
-impl TransactionCreatorTrait<PostgresTransaction> for PostgresTransactionCreator {
+impl TransactionManagerTrait<PostgresTransaction> for PostgresTransactionManager {
     async fn create(&self) -> Result<PostgresTransaction, ServerError> {
         self.db.begin().await
             .map(PostgresTransaction::new)

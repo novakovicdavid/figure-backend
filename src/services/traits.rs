@@ -3,9 +3,9 @@ use bytes::Bytes;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::Session;
-use crate::entities::figure::Figure;
-use crate::entities::profile::Profile;
-use crate::entities::types::IdType;
+use crate::domain::models::figure::Figure;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
 use crate::server_errors::ServerError;
 
 #[async_trait]

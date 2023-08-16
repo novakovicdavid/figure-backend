@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use crate::repositories::traits::{FigureRepositoryTrait, ProfileRepositoryTrait, SessionRepositoryTrait, TransactionCreatorTrait, TransactionTrait, UserRepositoryTrait};
+use crate::repositories::traits::{FigureRepositoryTrait, ProfileRepositoryTrait, SessionRepositoryTrait, TransactionManagerTrait, TransactionTrait, UserRepositoryTrait};
 use crate::services::traits::{FigureServiceTrait, ProfileServiceTrait, UserServiceTrait};
 
 pub trait ContextTrait: Send + Sync {
@@ -81,7 +81,7 @@ impl<US, PS, FS> ServiceContextTrait for ServiceContext<US, PS, FS>
 
 pub trait RepositoryContextTrait: Send + Sync {
     type Transaction: TransactionTrait;
-    type TransactionCreator: TransactionCreatorTrait<Self::Transaction>;
+    type TransactionManager: TransactionManagerTrait<Self::Transaction>;
     type UserRepository: UserRepositoryTrait<Self::Transaction>;
     type ProfileRepository: ProfileRepositoryTrait<Self::Transaction>;
     type FigureRepository: FigureRepositoryTrait<Self::Transaction>;
@@ -122,9 +122,9 @@ impl<T, UR, PR, FR, SR, TS> RepositoryContext<T, UR, PR, FR, SR, TS> {
 
 impl<T, UR, PR, FR, SR, TS> RepositoryContextTrait for RepositoryContext<T, UR, PR, FR, SR, TS>
     where T: TransactionTrait, UR: UserRepositoryTrait<T>, PR: ProfileRepositoryTrait<T>,
-          FR: FigureRepositoryTrait<T>, SR: SessionRepositoryTrait, TS: TransactionCreatorTrait<T> {
+          FR: FigureRepositoryTrait<T>, SR: SessionRepositoryTrait, TS: TransactionManagerTrait<T> {
     type Transaction = T;
-    type TransactionCreator = TS;
+    type TransactionManager = TS;
     type UserRepository = UR;
     type ProfileRepository = PR;
     type FigureRepository = FR;

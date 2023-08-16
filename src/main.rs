@@ -9,6 +9,8 @@ mod repositories;
 mod context;
 mod utilities;
 mod environment;
+mod domain;
+mod infrastructure;
 
 use std::env;
 use std::net::SocketAddr;
@@ -36,7 +38,7 @@ use crate::environment::Environment;
 use crate::repositories::figure_repository::FigureRepository;
 use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
-use crate::repositories::transaction::PostgresTransactionCreator;
+use crate::repositories::transaction::PostgresTransactionManager;
 use crate::repositories::user_repository::UserRepository;
 use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
@@ -164,7 +166,7 @@ fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors
 
 fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState<impl ContextTrait>> {
     // Initialize repositories
-    let transaction_starter = PostgresTransactionCreator::new(db_pool.clone());
+    let transaction_starter = PostgresTransactionManager::new(db_pool.clone());
     let user_repository = UserRepository::new(db_pool.clone());
     let profile_repository = ProfileRepository::new(db_pool.clone());
     let figure_repository = FigureRepository::new(db_pool.clone());

@@ -3,9 +3,9 @@ use serde_json::{json, Value};
 use sqlx::{Error, FromRow};
 use sqlx::postgres::PgRow;
 use crate::entities::dtos::profile_dto::ProfileDTO;
-use crate::entities::figure::Figure;
-use crate::entities::profile::Profile;
-use crate::entities::types::IdType;
+use crate::domain::models::figure::Figure;
+use crate::domain::models::profile::Profile;
+use crate::domain::models::types::IdType;
 
 #[derive(Serialize, Debug)]
 pub struct FigureDTO {
