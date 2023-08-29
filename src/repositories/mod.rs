@@ -4,3 +4,4 @@ pub mod session_repository;
 pub mod figure_repository;
 pub mod transaction;
 pub mod traits;
+mod entities;

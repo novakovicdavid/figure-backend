@@ -1,5 +1,5 @@
+use std::any::Any;
 use async_trait::async_trait;
-use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::entities::dtos::session_dtos::Session;
 use crate::domain::models::figure::Figure;
 use crate::domain::models::profile::Profile;
@@ -38,8 +38,8 @@ pub trait ProfileRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
 #[async_trait]
 pub trait FigureRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn create(&self, transaction: Option<&mut T>, figure: Figure) -> Result<Figure, ServerError>;
-    async fn find_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<FigureDTO, ServerError>;
-    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut T>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureDTO>, ServerError>;
+    async fn find_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<(Figure, Profile), ServerError>;
+    async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut T>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError>;
     async fn update_figure(&self, transaction: Option<&mut T>, figure: Figure) -> Result<(), ServerError>;
     async fn delete_figure_by_id(&self, transaction: Option<&mut T>, figure_id: IdType) -> Result<(), ServerError>;
     async fn count_by_profile_id(&self, transaction: Option<&mut T>, profile_id: IdType) -> Result<IdType, ServerError>;

@@ -42,11 +42,9 @@ pub async fn browse_figures_from_profile_starting_from_figure_id<C: ContextTrait
 async fn get_figures_with_parameters<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, starting_from_figure_id: Option<IdType>, profile_id: Option<IdType>) -> Response {
     let figures = server_state.context.service_context().figure_service().find_figures_starting_from_id_with_profile_id(starting_from_figure_id, profile_id, 3).await;
     match figures {
-        Ok(figures) => {
-            json!({
-                "figures": figures
-            }).to_string().into_response()
-        }
+        Ok(figures) => serde_json::to_string(&figures)
+            .map_err(|error| ServerError::InternalError(Arc::new(error.into())))
+            .into_response(),
         Err(e) => e.into_response()
     }
 }
@@ -87,7 +85,7 @@ pub async fn upload_figure<C: ContextTrait>(session: Extension<SessionOption>, S
     match server_state.context.service_context().figure_service().create(title, description, image, width, height, session.get_profile_id()).await {
         Ok(figure) => {
             json!({
-                "figure_id": figure.id
+                "figure_id": figure.get_id()
             }).to_string().into_response()
         }
         Err(e) => e.into_response()
@@ -117,14 +115,17 @@ async fn parse_multipart(mut multipart: Multipart) -> Result<(String, Option<Str
         };
     };
 
-    if title.is_none() || image.is_none() {
-        return Err(ServerError::MissingFieldInForm)?;
-    }
-    let title = title.unwrap();
-    let image = image.unwrap();
+    let (title, image) = match (title, image) {
+        (Some(title), Some(image)) => (title, image),
+        _ => {
+            return Err(ServerError::MissingFieldInForm)?;
+        }
+    };
 
     let format = parse_image_format(&image)?.to_vec();
-    if !format.contains(&"jpg") && !format.contains(&"jpeg") && !format.contains(&"png") {
+
+    // If format isn't one of these formats in the array
+    if !["jpg", "jpeg", "png"].iter().any(|&f| format.contains(&f)) {
         return Err(ServerError::InvalidImage)?;
     }
 
@@ -136,18 +137,15 @@ async fn parse_multipart(mut multipart: Multipart) -> Result<(String, Option<Str
     };
 
     // Convert to JPEG
-    let mut buffer = vec![];
     let parsed_image = image::load_from_memory(&image)?;
+    let mut buffer = vec![];
     parsed_image.write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Jpeg(90))?;
 
     Ok((title, description, Bytes::from(buffer.to_vec()), width, height))
 }
 
 fn get_image_dimensions(image: &Bytes) -> Result<(u32, u32), anyhow::Error> {
-    let (width, height) = image::load_from_memory(image)?.dimensions();
-    let width = width;
-    let height = height;
-    Ok((width, height))
+    Ok(image::load_from_memory(image)?.dimensions())
 }
 
 pub fn parse_image_format(data: &Bytes) -> Result<&'static [&'static str], anyhow::Error> {

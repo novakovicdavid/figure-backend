@@ -4,68 +4,43 @@ use sqlx::postgres::PgRow;
 use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
 
-pub enum ProfileDef {
-    Table,
-    Id,
-    Username,
-    DisplayName,
-    Bio,
-    Banner,
-    ProfilePicture,
-    UserId,
-}
+pub struct ProfileDef(&'static str);
 
 impl ProfileDef {
-    pub fn as_str(&self) -> &str {
-        match self {
-            ProfileDef::Table => "profile",
-            ProfileDef::Id => "id",
-            ProfileDef::Username => "username",
-            ProfileDef::DisplayName => "display_name",
-            ProfileDef::Bio => "bio",
-            ProfileDef::Banner => "banner",
-            ProfileDef::ProfilePicture => "profile_picture",
-            ProfileDef::UserId => "user_id",
-        }
-    }
+    pub const TABLE: &'static str = "profile";
 
-    pub fn as_table_str(&self) -> &str {
-        match self {
-            ProfileDef::Table => "profile",
-            ProfileDef::Id => "profile.id",
-            ProfileDef::Username => "profile.username",
-            ProfileDef::DisplayName => "profile.display_name",
-            ProfileDef::Bio => "profile.bio",
-            ProfileDef::Banner => "profile.banner",
-            ProfileDef::ProfilePicture => "profile.profile_picture",
-            ProfileDef::UserId => "profile.user_id",
-        }
-    }
+    pub const ID: &'static str = "id";
+    pub const ID_UNIQUE: &'static str = "profile_id";
 
-    pub fn unique(&self) -> &str {
-        match self {
-            ProfileDef::Id => "profile_id",
-            _ => self.as_table_str(),
-        }
-    }
+    pub const USERNAME: &'static str = "username";
+    pub const DISPLAY_NAME: &'static str = "display_name";
+    pub const BIO: &'static str = "bio";
+    pub const BANNER: &'static str = "banner";
+    pub const PROFILE_PICTURE: &'static str = "profile_picture";
+
+    pub const USER_ID: &'static str = "user_id";
+
+    // pub fn with_table(column: Self) -> String {
+    //     format!("{}.{}", Self::TABLE, column)
+    // }
 }
 
 impl Display for ProfileDef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.as_table_str())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl FromRow<'_, PgRow> for Profile {
     fn from_row(row: &PgRow) -> Result<Self, Error> {
-        let id: IdType = row.try_get(ProfileDef::Id.unique())
-            .or_else(|_| row.try_get(ProfileDef::Id.as_str()))?;
-        let username: String = row.try_get(ProfileDef::Username.as_str())?;
-        let display_name: Option<String> = row.try_get(ProfileDef::DisplayName.as_str())?;
-        let user_id: IdType = row.try_get(ProfileDef::UserId.as_str())?;
-        let profile_picture: Option<String> = row.try_get(ProfileDef::ProfilePicture.as_str())?;
-        let bio: Option<String> = row.try_get(ProfileDef::Bio.as_str())?;
-        let banner: Option<String> = row.try_get(ProfileDef::Banner.as_str())?;
+        let id: IdType = row.try_get(ProfileDef::ID_UNIQUE)
+            .or_else(|_| row.try_get(ProfileDef::ID))?;
+        let username: String = row.try_get(ProfileDef::USERNAME)?;
+        let display_name: Option<String> = row.try_get(ProfileDef::DISPLAY_NAME)?;
+        let user_id: IdType = row.try_get(ProfileDef::USER_ID)?;
+        let profile_picture: Option<String> = row.try_get(ProfileDef::PROFILE_PICTURE)?;
+        let bio: Option<String> = row.try_get(ProfileDef::BIO)?;
+        let banner: Option<String> = row.try_get(ProfileDef::BANNER)?;
 
         Ok(Profile::new_raw(
             id,

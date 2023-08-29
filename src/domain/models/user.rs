@@ -16,7 +16,7 @@ pub struct User {
 
 impl User {
     pub fn new(id: IdType, email: String, password: String, role: String) -> Result<Self, ServerError> {
-        validate_email(&email)?;
+        Self::validate_email(&email)?;
 
         Ok(Self::new_raw(id, email, password, role))
     }
@@ -28,6 +28,27 @@ impl User {
             password,
             role,
         }
+    }
+
+    // Valid email test (OWASP Regex + maximum length of 60 graphemes
+    fn validate_email(email: &str) -> Result<(), ServerError> {
+        let graphemes = email.graphemes(true);
+        let mut count = 0;
+        for _ in graphemes {
+            count += 1;
+            if count > 60 {
+                return Err(ServerError::InvalidEmail)
+            }
+        }
+        if count < 3 {
+            return Err(ServerError::InvalidEmail)
+        }
+
+        if !EMAIL_REGEX.is_match(email) {
+            return Err(ServerError::InvalidEmail)
+        }
+
+        Ok(())
     }
 
     pub fn get_id(&self) -> IdType {
@@ -61,27 +82,6 @@ impl User {
     pub fn set_role(&mut self, role: String) {
         self.role = role;
     }
-}
-
-// Valid email test (OWASP Regex + maximum length of 60 graphemes
-fn validate_email(email: &str) -> Result<(), ServerError> {
-    let graphemes = email.graphemes(true);
-    let mut count = 0;
-    for _ in graphemes {
-        count += 1;
-        if count > 60 {
-            return Err(ServerError::InvalidEmail)
-        }
-    }
-    if count < 3 {
-        return Err(ServerError::InvalidEmail)
-    }
-
-    if !EMAIL_REGEX.is_match(email) {
-        return Err(ServerError::InvalidEmail)
-    }
-
-    Ok(())
 }
 
 lazy_static! {

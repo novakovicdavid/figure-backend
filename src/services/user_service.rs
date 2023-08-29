@@ -5,8 +5,6 @@ use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Algorithm::Argon2id;
 use argon2::password_hash::SaltString;
 
-use lazy_static::lazy_static;
-use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
@@ -16,7 +14,6 @@ use crate::repositories::traits::{ProfileRepositoryTrait, SessionRepositoryTrait
 use crate::services::traits::UserServiceTrait;
 use crate::utilities::traits::RandomNumberGenerator;
 use interpol::format as iformat;
-use tracing::warn;
 use crate::domain::models::profile::Profile;
 use crate::domain::models::user::User;
 
@@ -92,7 +89,7 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
             Err(_e) => return Err(ServerError::UserWithEmailNotFound),
         };
 
-        let parsed_hash = match PasswordHash::new(&user.get_password()) {
+        let parsed_hash = match PasswordHash::new(user.get_password()) {
             Ok(hash) => hash,
             Err(e) => {
                 return Err(ServerError::InternalError(Arc::new(e.into())));
@@ -118,7 +115,7 @@ pub fn hash_password(password: &str, with_checks: bool) -> Result<String, Server
         if password_length < 8 {
             return Err(ServerError::PasswordTooShort);
         }
-        if password_length > 60 {
+        if password_length > 128 {
             return Err(ServerError::PasswordTooLong);
         }
     }

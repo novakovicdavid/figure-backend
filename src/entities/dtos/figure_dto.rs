@@ -29,15 +29,15 @@ impl FigureDTO {
         })
     }
 
-    pub fn from(figure: Figure, profile_dto: ProfileDTO) -> Self {
+    pub fn from(figure: Figure, profile: Profile) -> Self {
         Self {
-            id: figure.id,
-            title: figure.title,
-            description: figure.description,
-            width: figure.width,
-            height: figure.height,
-            url: figure.url,
-            profile: profile_dto,
+            id: figure.get_id(),
+            title: figure.get_title().to_string(),
+            description: figure.get_description().cloned(),
+            width: figure.get_width(),
+            height: figure.get_height(),
+            url: figure.get_url().to_string(),
+            profile: ProfileDTO::from(profile),
         }
     }
 }
@@ -49,12 +49,12 @@ impl FromRow<'_, PgRow> for FigureDTO {
         let profile_dto = ProfileDTO::from(profile);
 
         Ok(FigureDTO {
-            id: figure.id,
-            title: figure.title,
-            description: figure.description,
-            width: figure.width,
-            height: figure.height,
-            url: figure.url,
+            id: figure.get_id(),
+            title: figure.get_title().to_string(),
+            description: figure.get_description().cloned(),
+            width: figure.get_width(),
+            height: figure.get_height(),
+            url: figure.get_url().to_string(),
             profile: profile_dto,
         })
     }

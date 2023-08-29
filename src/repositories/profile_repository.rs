@@ -26,9 +26,9 @@ impl ProfileRepository {
 impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, profile: Profile) -> Result<Profile, ServerError> {
         let query_string = iformat!(r#"
-            INSERT INTO {ProfileDef::Table} ({ProfileDef::Username.as_str()}, {ProfileDef::UserId.as_str()})
+            INSERT INTO {ProfileDef::TABLE} ({ProfileDef::USERNAME}, {ProfileDef::USER_ID})
             VALUES ($1, $2)
-            RETURNING {ProfileDef::Id.as_str()}, {ProfileDef::Username.as_str()}, {ProfileDef::UserId.as_str()}"#);
+            RETURNING {ProfileDef::ID}, {ProfileDef::USERNAME}, {ProfileDef::USER_ID}"#);
         let query = sqlx::query_as::<_, Profile>(&query_string)
             .bind(profile.get_username())
             .bind(profile.get_user_id());
@@ -52,7 +52,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
     }
 
     async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<Profile, ServerError> {
-        let query_string = iformat!("SELECT * FROM {ProfileDef::Table} WHERE {ProfileDef::Id.as_str()} = $1");
+        let query_string = iformat!("SELECT * FROM {ProfileDef::TABLE} WHERE {ProfileDef::ID} = $1");
         let query =
             sqlx::query_as::<_, Profile>(&query_string)
                 .bind(profile_id);
@@ -68,7 +68,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
     }
 
     async fn find_by_user_id(&self, transaction: Option<&mut PostgresTransaction>, user_id: IdType) -> Result<Profile, ServerError> {
-        let query_string = iformat!("SELECT * FROM {ProfileDef::Table} WHERE {ProfileDef::UserId.as_str()} = $1");
+        let query_string = iformat!("SELECT * FROM {ProfileDef::TABLE} WHERE {ProfileDef::USER_ID} = $1");
         let query =
             sqlx::query_as::<_, Profile>(&query_string)
                 .bind(user_id);
@@ -85,11 +85,11 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
 
     async fn update_profile_by_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>) -> Result<(), ServerError> {
         let query_string = iformat!(r#"
-            UPDATE {ProfileDef::Table}
-            SET {ProfileDef::DisplayName.as_str()} = $1, {ProfileDef::Bio.as_str()} = $2,
-            {ProfileDef::Banner.as_str()} = COALESCE($3, {ProfileDef::Banner.as_str()}),
-            {ProfileDef::ProfilePicture.as_str()} = COALESCE($4, {ProfileDef::ProfilePicture.as_str()})
-            WHERE {ProfileDef::Id} = $5
+            UPDATE {ProfileDef::TABLE}
+            SET {ProfileDef::DISPLAY_NAME} = $1, {ProfileDef::BIO} = $2,
+            {ProfileDef::BANNER} = COALESCE($3, {ProfileDef::BANNER}),
+            {ProfileDef::PROFILE_PICTURE} = COALESCE($4, {ProfileDef::PROFILE_PICTURE})
+            WHERE {ProfileDef::ID} = $5
             "#);
         let query =
             sqlx::query(&query_string)
@@ -108,7 +108,7 @@ impl ProfileRepositoryTrait<PostgresTransaction> for ProfileRepository {
     }
 
     async fn get_total_profiles_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
-        let query_string = iformat!("SELECT count(*) FROM {ProfileDef::Table}");
+        let query_string = iformat!("SELECT count(*) FROM {ProfileDef::TABLE}");
         let query = sqlx::query(&query_string);
         match transaction {
             Some(transaction) => query.fetch_one(transaction.inner()).await,
