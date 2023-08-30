@@ -56,6 +56,10 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
           U: UserRepositoryTrait<T>, P: ProfileRepositoryTrait<T>, S: SessionRepositoryTrait,
           R: RandomNumberGenerator {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError> {
+        User::validate_email(&email)?;
+        if self.user_repository.find_one_by_email(None, email.clone()).await.is_ok() {
+            return Err(ServerError::EmailAlreadyInUse);
+        }
         let password_hash_result = hash_password(&password, true);
         let password_hash = match password_hash_result {
             Ok(hash) => hash,

@@ -31,7 +31,7 @@ impl User {
     }
 
     // Valid email test (OWASP Regex + maximum length of 60 graphemes
-    fn validate_email(email: &str) -> Result<(), ServerError> {
+    pub fn validate_email(email: &str) -> Result<(), ServerError> {
         let graphemes = email.graphemes(true);
         let mut count = 0;
         for _ in graphemes {

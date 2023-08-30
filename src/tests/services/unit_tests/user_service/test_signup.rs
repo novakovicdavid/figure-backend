@@ -71,7 +71,7 @@ pub async fn password_too_long() {
 
     let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
-    let signup_result = user_service.signup_user("test@test.test".to_string(), "1111111111111111111111111111111111111111111111111111111111111".to_string(), "test".to_string()).await;
+    let signup_result = user_service.signup_user("test@test.test".to_string(), "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::PasswordTooLong));
