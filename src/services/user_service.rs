@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Algorithm::Argon2id;
 use argon2::password_hash::SaltString;
-
 use unicode_segmentation::UnicodeSegmentation;
 use crate::server_errors::ServerError;
 use rand_core::OsRng;

@@ -26,9 +26,9 @@ impl UserRepository {
 impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, user: User) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
-            INSERT INTO {UserDef::Table} ({UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()})
+            INSERT INTO {UserDef::TABLE} ({UserDef::EMAIL} {UserDef::PASSWORD}, {UserDef::ROLE})
             VALUES ($1, $2, 'user')
-            RETURNING {UserDef::Id.as_str()}, {UserDef::Email.as_str()}, {UserDef::Password.as_str()}, {UserDef::Role.as_str()}"#);
+            RETURNING {UserDef::ID}, {UserDef::EMAIL}, {UserDef::PASSWORD}, {UserDef::ROLE}"#);
         let query = sqlx::query_as::<_, User>(&query_string)
             .bind(user.get_email())
             .bind(user.get_password());
@@ -53,9 +53,9 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
 
     async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
-        SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
-        FROM {UserDef::Table}
-        WHERE {UserDef::Email.as_str()} = $1
+        SELECT {UserDef::ID} AS {UserDef::ID_UNIQUE}, {UserDef::EMAIL}, {UserDef::PASSWORD}, {UserDef::ROLE}
+        FROM {UserDef::TABLE}
+        WHERE {UserDef::EMAIL} = $1
         "#);
         let query =
             sqlx::query_as::<_, User>(&query_string)
@@ -71,9 +71,9 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
 
     async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, id: IdType) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
-        SELECT {UserDef::Id} AS {UserDef::Id.unique()}, {UserDef::Email}, {UserDef::Password}, {UserDef::Role}
-        FROM {UserDef::Table}
-        WHERE {UserDef::Id.as_str()} = $1
+        SELECT {UserDef::ID} AS {UserDef::ID_UNIQUE}, {UserDef::EMAIL}, {UserDef::PASSWORD}, {UserDef::ROLE}
+        FROM {UserDef::TABLE}
+        WHERE {UserDef::ID} = $1
         "#);
         let query =
             sqlx::query_as::<_, User>(&query_string)

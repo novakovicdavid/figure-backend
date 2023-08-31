@@ -4,56 +4,30 @@ use sqlx::postgres::PgRow;
 use crate::domain::models::types::IdType;
 use crate::domain::models::user::User;
 
-pub enum UserDef {
-    Table,
-    Id,
-    Email,
-    Password,
-    Role,
-}
+pub struct UserDef;
 
 impl UserDef {
-    pub fn as_str(&self) -> &str {
-        match self {
-            UserDef::Table => "\"user\"",
-            UserDef::Id => "id",
-            UserDef::Email => "email",
-            UserDef::Password => "password",
-            UserDef::Role => "role",
-        }
-    }
+    pub const TABLE: &'static str = "\"user\"";
 
-    pub fn as_table_str(&self) -> &str {
-        match self {
-            UserDef::Table => "\"user\"",
-            UserDef::Id => "\"user\".id",
-            UserDef::Email => "\"user\".email",
-            UserDef::Password => "\"user\".password",
-            UserDef::Role => "\"user\".role",
-        }
-    }
+    pub const ID: &'static str = "\"user\".id";
+    pub const ID_UNIQUE: &'static str = "u_user_id";
 
-    pub fn unique(&self) -> &str {
-        match self {
-            UserDef::Id => "user_id",
-            _ => self.as_table_str(),
-        }
-    }
-}
+    pub const EMAIL: &'static str = "\"user\".email";
+    pub const PASSWORD: &'static str = "\"user\".password";
+    pub const ROLE: &'static str = "\"user\".role";
 
-impl Display for UserDef {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.as_table_str())
+    pub fn with_table(column: &str) -> String {
+        format!("{}.{}", Self::TABLE, column)
     }
 }
 
 impl FromRow<'_, PgRow> for User {
     fn from_row(row: &PgRow) -> Result<Self, Error> {
-        let id: IdType = row.try_get(UserDef::Id.unique())
-            .or_else(|_| row.try_get(UserDef::Id.as_str()))?;
-        let email: String = row.try_get(UserDef::Email.as_str())?;
-        let password: String = row.try_get(UserDef::Password.as_str())?;
-        let role: String = row.try_get(UserDef::Role.as_str())?;
+        let id: IdType = row.try_get(UserDef::ID_UNIQUE)
+            .or_else(|_| row.try_get(&UserDef::ID[7..]))?;
+        let email: String = row.try_get(&UserDef::EMAIL[7..])?;
+        let password: String = row.try_get(&UserDef::PASSWORD[7..])?;
+        let role: String = row.try_get(&UserDef::ROLE[7..])?;
 
         Ok(User::new_raw(id, email, password, role))
     }

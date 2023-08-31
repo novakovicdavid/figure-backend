@@ -7,6 +7,7 @@ use crate::infrastructure::models::figure::FigureDef;
 use crate::infrastructure::models::profile::ProfileDef;
 use crate::domain::models::types::IdType;
 use interpol::format as iformat;
+use tracing::info;
 use crate::domain::models::profile::Profile;
 use crate::repositories::entities::FigureAndProfile;
 use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
@@ -61,10 +62,10 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
     async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(Figure, Profile), ServerError> {
         let query_string = iformat!(r#"
             SELECT
-            {FigureDef::TABLE}.{FigureDef::ID} AS {FigureDef::ID_UNIQUE}, {FigureDef::TITLE}, {FigureDef::DESCRIPTION},
+            {FigureDef::ID} AS {FigureDef::ID_UNIQUE}, {FigureDef::TITLE}, {FigureDef::DESCRIPTION},
             {FigureDef::URL}, {FigureDef::WIDTH}, {FigureDef::HEIGHT},
 
-            {ProfileDef::TABLE}.{ProfileDef::ID} AS {ProfileDef::ID_UNIQUE}, {ProfileDef::USERNAME}, {ProfileDef::DISPLAY_NAME},
+            {ProfileDef::ID} AS {ProfileDef::ID_UNIQUE}, {ProfileDef::USERNAME}, {ProfileDef::DISPLAY_NAME},
             {ProfileDef::BIO}, {ProfileDef::BANNER}, {ProfileDef::PROFILE_PICTURE}, {ProfileDef::USER_ID}
 
             FROM {FigureDef::TABLE}
@@ -86,7 +87,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError> {
         let mut query_string = iformat!(r#"
-            SELECT {FigureDef::ID} AS {FigureDef::ID_UNIQUE}, {FigureDef::TITLE}, {FigureDef::DESCRIPTION}, {FigureDef::URL}, {FigureDef::WIDTH}, {FigureDef::HEIGHT},
+            SELECT {FigureDef::ID} AS {FigureDef::ID_UNIQUE}, {FigureDef::TITLE}, {FigureDef::DESCRIPTION}, {FigureDef::URL}, {FigureDef::WIDTH}, {FigureDef::HEIGHT}, {FigureDef::PROFILE_ID},
             {ProfileDef::ID} AS {ProfileDef::ID_UNIQUE}, {ProfileDef::USERNAME}, {ProfileDef::DISPLAY_NAME}, {ProfileDef::BIO}, {ProfileDef::BANNER}, {ProfileDef::PROFILE_PICTURE}, {ProfileDef::USER_ID}
             FROM {FigureDef::TABLE}
             INNER JOIN {ProfileDef::TABLE}
@@ -121,6 +122,8 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
         ORDER BY {FigureDef::ID} DESC
         LIMIT {limit}
         "#);
+
+        info!("{}", &query_string);
 
         let query = sqlx::query_as::<_, FigureAndProfile>(&query_string);
 
