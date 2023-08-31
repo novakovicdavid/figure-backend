@@ -94,7 +94,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             ON {FigureDef::PROFILE_ID} = {ProfileDef::ID}
             "#);
 
-        // Filter figures by starting from figure id.
+        // Select figures with id starting after given figure id
         if let Some(starting_from_id) = figure_id {
             query_string = iformat!(r#"
             {query_string}
@@ -102,7 +102,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             "#);
         }
 
-        // Filter by profile
+        // Filter by given profile id
         if let Some(from_profile) = profile_id {
             let mut filter = iformat!("{FigureDef::PROFILE_ID} = {from_profile}");
             // Check if where clause already exists in query (only figure_id will add where clause)
@@ -117,13 +117,12 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             "#);
         }
 
+        // Order and limit
         query_string = iformat!(r#"
         {query_string}
         ORDER BY {FigureDef::ID} DESC
         LIMIT {limit}
         "#);
-
-        info!("{}", &query_string);
 
         let query = sqlx::query_as::<_, FigureAndProfile>(&query_string);
 
