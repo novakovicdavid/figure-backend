@@ -12,7 +12,6 @@ mod environment;
 mod domain;
 mod infrastructure;
 
-use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
