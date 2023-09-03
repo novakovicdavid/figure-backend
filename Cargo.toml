@@ -41,19 +41,5 @@ rand = "0.8.5"
 rand_chacha = "0.3.1"
 tracing-loki = "0.2.3"
 
-[dev-dependencies]
-hyper = "0.14.23"
-mime = "0.3.16"
-
-[profile.dev.package.sqlx-macros]
-opt-level = 3
-
 [profile.release]
-opt-level = 3
-debug = false
-debug-assertions = false
-overflow-checks = false
-lto = false
-panic = 'unwind'
-incremental = false
-rpath = false
+lto = "fat"

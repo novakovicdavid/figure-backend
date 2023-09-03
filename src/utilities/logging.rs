@@ -38,7 +38,9 @@ pub fn init_logging(loki_host: Option<String>, loki_url: Option<String>) -> Resu
 }
 
 fn add_filter_to_layer<S: Subscriber>(layer: impl Layer<S>) -> Result<Filtered<impl Layer<S>, EnvFilter, S>, anyhow::Error> {
-    Ok(layer.with_filter(EnvFilter::default()
+    Ok(layer
+        .with_filter(EnvFilter::default()
         .add_directive("WARN".parse()?)
-        .add_directive("figure_backend=INFO".parse()?)))
+        .add_directive("figure_backend=INFO".parse()?)
+        .add_directive("tower_http=DEBUG".parse()?)))
 }

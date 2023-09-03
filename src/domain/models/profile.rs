@@ -19,7 +19,7 @@ pub struct Profile {
 
 impl Profile {
     pub fn new(id: IdType, username: String, display_name: Option<String>, bio: Option<String>, banner: Option<String>, profile_picture: Option<String>, user_id: IdType) -> Result<Self, ServerError> {
-        validate_username(&username)?;
+        Self::validate_username(&username)?;
 
         Ok(Self::new_raw(id, username, display_name, bio, banner, profile_picture, user_id))
     }
@@ -34,6 +34,18 @@ impl Profile {
             profile_picture,
             user_id,
         }
+    }
+
+    // Valid username test
+    // (alphanumerical, optionally a dash surrounded by alphanumerical characters, 15 character limit)
+    pub fn validate_username(username: &str) -> Result<(), ServerError> {
+        let username_count = username.graphemes(true).count();
+
+        if !USERNAME_REGEX.is_match(username) || !(3..=15).contains(&username_count) {
+            return Err(ServerError::InvalidUsername);
+        }
+
+        Ok(())
     }
 
     pub fn get_id(&self) -> IdType {
@@ -91,18 +103,6 @@ impl Profile {
     pub fn set_user_id(&mut self, user_id: IdType) {
         self.user_id = user_id;
     }
-}
-
-// Valid username test
-// (alphanumerical, optionally a dash surrounded by alphanumerical characters, 15 character limit)
-fn validate_username(username: &str) -> Result<(), ServerError> {
-    let username_count = username.graphemes(true).count();
-
-    if !USERNAME_REGEX.is_match(username) || !(3..=15).contains(&username_count) {
-        return Err(ServerError::InvalidUsername);
-    }
-
-    Ok(())
 }
 
 lazy_static! {

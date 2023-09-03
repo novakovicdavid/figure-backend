@@ -4,7 +4,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use tracing::error;
+use tracing::{error, Instrument};
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -28,14 +28,9 @@ pub enum ServerError {
     InternalError(Arc<anyhow::Error>),
 }
 
-#[derive(Serialize)]
-pub struct ErrorResponse<'a> {
-    pub(crate) error: &'a str,
-}
-
-impl Display for ServerError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let message = match self {
+impl ServerError {
+    pub fn to_str(&self) -> &str {
+        match self {
             ServerError::InvalidEmail => "invalid-email",
             ServerError::InvalidUsername => "invalid-username",
             ServerError::PasswordTooShort => "password-too-short",
@@ -53,14 +48,26 @@ impl Display for ServerError {
             ServerError::InvalidMultipart => "invalid-multipart",
             ServerError::ImageDimensionsTooLarge => "image-dimensions-too-large",
             ServerError::InternalError(_) => "internal-server-error"
-        };
-        write!(f, "{}", message)
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct ErrorResponse<'a> {
+    error: &'a str,
+}
+
+impl Display for ServerError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_str())
     }
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
-        let status_code = match &self {
+        let error_str = self.to_string();
+
+        let status_code = match self {
             ServerError::InvalidEmail => StatusCode::BAD_REQUEST,
             ServerError::InvalidUsername => StatusCode::BAD_REQUEST,
             ServerError::PasswordTooShort => StatusCode::BAD_REQUEST,
@@ -78,17 +85,20 @@ impl IntoResponse for ServerError {
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
             ServerError::InternalError(error) => {
-                let error = error.clone();
+                let span = tracing::Span::current();
+
                 tokio::task::spawn(async move {
                     error!("Internal server error: {}\n{}", error, error.backtrace());
-                });
+                }.instrument(span));
+
                 StatusCode::INTERNAL_SERVER_ERROR
             },
         };
+
         (
             status_code,
             Json(ErrorResponse {
-                error: &self.to_string()
+                error: &error_str
             })
         ).into_response()
     }

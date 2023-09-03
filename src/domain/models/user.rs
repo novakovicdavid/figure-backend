@@ -51,6 +51,20 @@ impl User {
         Ok(())
     }
 
+    pub fn validate_password(password: &str) -> Result<(), ServerError> {
+        let password_length = password.graphemes(true).count();
+
+        if password_length < 8 {
+            return Err(ServerError::PasswordTooShort);
+        }
+
+        if password_length > 128 {
+            return Err(ServerError::PasswordTooLong);
+        }
+
+        Ok(())
+    }
+
     pub fn get_id(&self) -> IdType {
         self.id
     }

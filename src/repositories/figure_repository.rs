@@ -7,7 +7,6 @@ use crate::infrastructure::models::figure::FigureDef;
 use crate::infrastructure::models::profile::ProfileDef;
 use crate::domain::models::types::IdType;
 use interpol::format as iformat;
-use tracing::info;
 use crate::domain::models::profile::Profile;
 use crate::repositories::entities::FigureAndProfile;
 use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};

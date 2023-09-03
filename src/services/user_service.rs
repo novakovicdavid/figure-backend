@@ -56,10 +56,13 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
           R: RandomNumberGenerator {
     async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError> {
         User::validate_email(&email)?;
+        User::validate_password(&password)?;
+        Profile::validate_username(&username)?;
+
         if self.user_repository.find_one_by_email(None, email.clone()).await.is_ok() {
             return Err(ServerError::EmailAlreadyInUse);
         }
-        let password_hash_result = hash_password(&password, true);
+        let password_hash_result = hash_password(&password);
         let password_hash = match password_hash_result {
             Ok(hash) => hash,
             Err(e) => return Err(e)
@@ -87,10 +90,9 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
     }
 
     async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError> {
-        let user = match self.user_repository.find_one_by_email(None, email).await {
-            Ok(user) => user,
-            Err(_e) => return Err(ServerError::UserWithEmailNotFound),
-        };
+        User::validate_email(&email)?;
+        User::validate_password(&password)?;
+        let user = self.user_repository.find_one_by_email(None, email).await?;
 
         let parsed_hash = match PasswordHash::new(user.get_password()) {
             Ok(hash) => hash,
@@ -112,17 +114,7 @@ impl<TC, T, U, P, S, R> UserServiceTrait for UserService<TC, T, U, P, S, R>
     }
 }
 
-pub fn hash_password(password: &str, with_checks: bool) -> Result<String, ServerError> {
-    if with_checks {
-        let password_length = password.graphemes(true).count();
-        if password_length < 8 {
-            return Err(ServerError::PasswordTooShort);
-        }
-        if password_length > 128 {
-            return Err(ServerError::PasswordTooLong);
-        }
-    }
-
+pub fn hash_password(password: &str) -> Result<String, ServerError> {
     let password_salt = SaltString::generate(&mut OsRng);
     let argon2_params = match Params::new(8192, 5, 1, Some(32)) {
         Ok(argon2_params) => argon2_params,
