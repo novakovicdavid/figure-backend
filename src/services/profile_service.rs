@@ -48,8 +48,7 @@ impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
             let url = format!("profile_pictures/{}", Uuid::new_v4());
             profile_picture_url = self.storage.upload_image(url.as_str(), profile_picture)
                 .await
-                .map(Some)
-                .map_err(|e| ServerError::InternalError(Arc::new(e.into())))?;
+                .map(Some)?;
         }
         self.profile_repository.update_profile_by_id(None, profile_id, display_name, bio, banner_url, profile_picture_url).await
     }

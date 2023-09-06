@@ -41,6 +41,5 @@ fn add_filter_to_layer<S: Subscriber>(layer: impl Layer<S>) -> Result<Filtered<i
     Ok(layer
         .with_filter(EnvFilter::default()
         .add_directive("WARN".parse()?)
-        .add_directive("figure_backend=INFO".parse()?)
-        .add_directive("tower_http=DEBUG".parse()?)))
+        .add_directive("figure_backend=INFO".parse()?)))
 }

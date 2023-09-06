@@ -12,7 +12,7 @@ anyhow = { version = "1.0.71", features = ["backtrace"] }
 axum = { version = "0.6.18", features = ["multipart"] }
 axum-macros = "0.3.7"
 tower = "0.4.13"
-tower-http = { version = "0.4.1", features = ["cors", "limit", "trace", "tracing"] }
+tower-http = { version = "0.4.4", features = ["cors", "limit", "trace", "tracing"] }
 tower-cookies = { version = "0.9.0", features = ["signed", "private"] }
 cookie = { version = "0.17.0", features = ["secure"] }
 async-trait = "0.1.71"
@@ -40,6 +40,9 @@ tracing = "0.1.37"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 tracing-loki = "0.2.3"
+hyper = "0.14.27"
+http = "0.2.9"
+http-body = "0.4.5"
 
 [profile.release]
 lto = "fat"

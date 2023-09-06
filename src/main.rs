@@ -16,9 +16,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use axum::{Extension, middleware, Router};
-use axum::extract::{DefaultBodyLimit, MatchedPath};
-use axum::http::header::{ACCEPT, CONTENT_TYPE};
-use axum::http::{Method, Request};
+use axum::extract::DefaultBodyLimit;
 use axum::routing::get;
 use axum::routing::post;
 use redis::aio::ConnectionManager;
@@ -27,9 +25,10 @@ use tokio::task;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_cookies::CookieManagerLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_http::trace::TraceLayer;
 use url::Url;
-use tracing::{info, info_span, warn_span};
+use tracing::info;
+use http::Method;
+use http::header::{ACCEPT, CONTENT_TYPE};
 use crate::layers::auth_layer::authenticate;
 use crate::content_store::S3Storage;
 use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext};
@@ -40,7 +39,7 @@ use crate::repositories::profile_repository::ProfileRepository;
 use crate::repositories::session_repository::SessionRepository;
 use crate::repositories::transaction::PostgresTransactionManager;
 use crate::repositories::user_repository::UserRepository;
-use crate::routes::authentication_routes::{load_session, signin_user, signout_user, signup_user};
+use crate::routes::authentication_routes::{load_session, sign_in, sign_out, sign_up};
 use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::routes::misc_routes::healthcheck;
 use crate::routes::profile_routes::{get_profile, get_total_profiles_count, update_profile};
@@ -49,7 +48,8 @@ use crate::services::profile_service::ProfileService;
 use crate::services::user_service::UserService;
 use crate::utilities::logging::init_logging;
 use crate::utilities::secure_rand_generator::ChaCha20;
-use crate::layers::correlation_id_layer::{correlation_id_extension, CorrelationId};
+use crate::layers::correlation_id_layer::{correlation_id_extension};
+use crate::layers::tracing_layer::create_tracing_layer;
 
 pub struct ServerState<C: ContextTrait> {
     context: C,
@@ -143,9 +143,9 @@ fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors
         .layer(RequestBodyLimitLayer::new(5 * 1000000))
 
         .route("/healthcheck", get(healthcheck))
-        .route("/users/signup", post(signup_user))
-        .route("/users/signin", post(signin_user))
-        .route("/session/invalidate", post(signout_user))
+        .route("/users/signup", post(sign_up))
+        .route("/users/signin", post(sign_in))
+        .route("/session/invalidate", post(sign_out))
         .route("/session/load", get(load_session))
         .route("/figures/:id", get(get_figure))
         .route("/figures/browse", get(browse_figures))
@@ -163,27 +163,7 @@ fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors
         .layer(CookieManagerLayer::new())
         .layer(cors)
         .with_state(server_state)
-        .layer(TraceLayer::new_for_http()
-            .make_span_with(|request: &Request<_>| {
-                // Log the matched route's path (with placeholders not filled in).
-                // Use request.uri() or OriginalUri if you want the real path.
-                let matched_path = request
-                    .extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str);
-
-                let correlation_id = request.extensions()
-                    .get::<CorrelationId>();
-
-                info_span!(
-                    "http_request",
-                    method = ?request.method(),
-                    matched_path,
-                    correlation_id = correlation_id.unwrap_or(&CorrelationId("None".to_string())).0
-                )
-            })
-        )
-
+        .layer(create_tracing_layer())
         .layer(middleware::from_fn(correlation_id_extension))
 }
 

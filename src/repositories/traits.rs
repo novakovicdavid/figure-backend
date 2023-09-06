@@ -1,4 +1,3 @@
-use std::any::Any;
 use async_trait::async_trait;
 use crate::entities::dtos::session_dtos::Session;
 use crate::domain::models::figure::Figure;

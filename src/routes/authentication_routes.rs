@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::sync::Arc;
 use axum::{Extension, Json};
 use axum::extract::State;
@@ -42,7 +43,7 @@ impl From<Session> for SignInResponse {
     }
 }
 
-pub async fn signin_user<C: ContextTrait>(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
+pub async fn sign_in<C: ContextTrait>(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
     return match server_state.context.service_context().user_service().authenticate_user(signin.email, signin.password).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
@@ -58,7 +59,7 @@ pub async fn signin_user<C: ContextTrait>(Extension(_session_option): Extension<
     };
 }
 
-pub async fn signup_user<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
+pub async fn sign_up<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
     return match server_state.context.service_context().user_service().signup_user(signup.email, signup.password, signup.username).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
@@ -74,7 +75,7 @@ pub async fn signup_user<C: ContextTrait>(State(server_state): State<Arc<ServerS
     };
 }
 
-pub async fn signout_user<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
+pub async fn sign_out<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
     if let Some(mut cookie) = cookies.get("session_id") {
         match server_state.context.repository_context().session_repository().remove_by_id(cookie.value()).await {
             Ok(_) => {

@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
+use tracing::instrument;
 use crate::content_store::ContentStore;
 use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::domain::models::figure::Figure;
@@ -36,10 +37,10 @@ impl<T, F, S> FigureServiceTrait for FigureService<T, F, S>
             .map(|(figure, profile)| FigureDTO::from(figure, profile))
     }
 
+    #[instrument(level = "trace", skip(self))]
     async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError> {
         self.figure_repository.find_starting_from_id_with_profile_id(None, figure_id, profile_id, limit)
             .await
-            .map_err(ServerError::from)
     }
 
     async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError> {
