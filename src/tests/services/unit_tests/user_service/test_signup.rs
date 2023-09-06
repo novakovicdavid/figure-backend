@@ -79,7 +79,7 @@ pub async fn password_too_long() {
 }
 
 #[tokio::test]
-pub async fn signup_invalid_email() {
+pub async fn signup_missing_at_symbol_in_email() {
     let user_repository = MockUserRepository::new();
     let profile_repository = MockProfileRepository::new();
     let session_repository = MockSessionRepository::new();
@@ -88,42 +88,91 @@ pub async fn signup_invalid_email() {
 
     let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
 
-    // Missing @
     let signup_result = user_service.signup_user("testtest.test".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
     assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
+}
 
-    // Missing tld
+#[tokio::test]
+pub async fn signup_missing_tld_in_email() {
+    let user_repository = MockUserRepository::new();
+    let profile_repository = MockProfileRepository::new();
+    let session_repository = MockSessionRepository::new();
+    let transaction_manager = MockTransactionManager::new();
+    let random_number_generator = FakeRandomGenerator::new();
+
+    let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
+
     let signup_result = user_service.signup_user("test@test".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
     assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
+}
 
-    // Missing email username
+#[tokio::test]
+pub async fn signup_missing_username_in_email() {
+    let user_repository = MockUserRepository::new();
+    let profile_repository = MockProfileRepository::new();
+    let session_repository = MockSessionRepository::new();
+    let transaction_manager = MockTransactionManager::new();
+    let random_number_generator = FakeRandomGenerator::new();
+
+    let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
+
     let signup_result = user_service.signup_user("@test.test".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
     assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
+}
 
-    // Only @
+#[tokio::test]
+pub async fn signup_missing_username_and_domain_in_email() {
+    let user_repository = MockUserRepository::new();
+    let profile_repository = MockProfileRepository::new();
+    let session_repository = MockSessionRepository::new();
+    let transaction_manager = MockTransactionManager::new();
+    let random_number_generator = FakeRandomGenerator::new();
+
+    let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
+
     let signup_result = user_service.signup_user("@".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
     assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
+}
 
-    // Empty email
+#[tokio::test]
+pub async fn signup_empty_email() {
+    let user_repository = MockUserRepository::new();
+    let profile_repository = MockProfileRepository::new();
+    let session_repository = MockSessionRepository::new();
+    let transaction_manager = MockTransactionManager::new();
+    let random_number_generator = FakeRandomGenerator::new();
+
+    let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
+
     let signup_result = user_service.signup_user("".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 
     assert_eq!(signup_result, Err(ServerError::InvalidEmail));
     assert_eq!(saved_user, Err(ServerError::ResourceNotFound));
+}
 
-    // Too long
+#[tokio::test]
+pub async fn signup_email_too_long() {
+    let user_repository = MockUserRepository::new();
+    let profile_repository = MockProfileRepository::new();
+    let session_repository = MockSessionRepository::new();
+    let transaction_manager = MockTransactionManager::new();
+    let random_number_generator = FakeRandomGenerator::new();
+
+    let user_service = UserService::new(transaction_manager, user_repository.clone(), profile_repository, session_repository, random_number_generator);
+
     let signup_result = user_service.signup_user("1234567890123456789012345678901234567890123456789012345678901".to_string(), "12345678".to_string(), "test".to_string()).await;
     let saved_user = user_repository.find_by_id(None, 0).await;
 

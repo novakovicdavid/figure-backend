@@ -37,7 +37,6 @@ impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
 
     async fn find_by_id(&self, _transaction: Option<&mut MockTransaction>, id: IdType) -> Result<User, ServerError> {
         let db = self.db.lock().unwrap();
-        println!("{}", db.len());
         db.iter().find(|user| user.get_id() == id)
             .cloned()
             .ok_or_else(|| ServerError::ResourceNotFound)
