@@ -8,7 +8,7 @@ use crate::entities::dtos::figure_dto::FigureDTO;
 use crate::domain::models::figure::Figure;
 use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
-use crate::repositories::traits::{FigureRepositoryTrait, SessionRepositoryTrait, TransactionTrait};
+use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::FigureServiceTrait;
 

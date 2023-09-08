@@ -24,7 +24,6 @@ pub struct UserService<TC, T, U, P, S, R> {
     profile_repository: P,
     session_repository: S,
     secure_random_generator: R,
-
 }
 
 impl<TC, T, U, P, S, R> UserService<TC, T, U, P, S, R>
