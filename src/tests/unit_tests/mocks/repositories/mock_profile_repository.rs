@@ -4,7 +4,7 @@ use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
 use crate::repositories::traits::ProfileRepositoryTrait;
 use crate::server_errors::ServerError;
-use crate::tests::mocks::repositories::mock_transaction::MockTransaction;
+use crate::tests::unit_tests::mocks::repositories::mock_transaction::MockTransaction;
 
 #[derive(Clone)]
 pub struct MockProfileRepository {

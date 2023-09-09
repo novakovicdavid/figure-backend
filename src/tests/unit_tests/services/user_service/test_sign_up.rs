@@ -5,7 +5,7 @@ use crate::domain::models::user::User;
 use crate::repositories::traits::{ProfileRepositoryTrait, UserRepositoryTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::UserServiceTrait;
-use crate::tests::services::unit_tests::user_service::helpers::create_user_service_with_mocks;
+use crate::tests::unit_tests::services::user_service::helpers::create_user_service_with_mocks;
 
 #[tokio::test]
 pub async fn sign_up() {

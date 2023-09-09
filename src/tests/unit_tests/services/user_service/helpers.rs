@@ -1,9 +1,9 @@
 use crate::services::user_service::UserService;
-use crate::tests::mocks::repositories::mock_profile_repository::MockProfileRepository;
-use crate::tests::mocks::repositories::mock_session_repository::MockSessionRepository;
-use crate::tests::mocks::repositories::mock_transaction::{MockTransaction, MockTransactionManager};
-use crate::tests::mocks::repositories::mock_user_repository::MockUserRepository;
-use crate::tests::mocks::utilities::secure_rand_generator::FakeRandomGenerator;
+use crate::tests::unit_tests::mocks::repositories::mock_profile_repository::MockProfileRepository;
+use crate::tests::unit_tests::mocks::repositories::mock_session_repository::MockSessionRepository;
+use crate::tests::unit_tests::mocks::repositories::mock_transaction::{MockTransaction, MockTransactionManager};
+use crate::tests::unit_tests::mocks::repositories::mock_user_repository::MockUserRepository;
+use crate::tests::unit_tests::mocks::utilities::secure_rand_generator::FakeRandomGenerator;
 
 pub struct UserServiceMocks {
     pub user_repository: MockUserRepository,
