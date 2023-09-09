@@ -21,7 +21,7 @@ pub trait TransactionTrait: Send + Sync {
 #[async_trait]
 pub trait UserRepositoryTrait<T: TransactionTrait>: Send + Sync + Clone {
     async fn create(&self, transaction: Option<&mut T>, user: User) -> Result<User, ServerError>;
-    async fn find_one_by_email(&self, transaction: Option<&mut T>, email: String) -> Result<User, ServerError>;
+    async fn find_one_by_email(&self, transaction: Option<&mut T>, email: &str) -> Result<User, ServerError>;
     async fn find_by_id(&self, transaction: Option<&mut T>, id: IdType) -> Result<User, ServerError>;
 }
 

@@ -28,7 +28,7 @@ impl UserRepositoryTrait<MockTransaction> for MockUserRepository {
         Ok(user)
     }
 
-    async fn find_one_by_email(&self, _transaction: Option<&mut MockTransaction>, email: String) -> Result<User, ServerError> {
+    async fn find_one_by_email(&self, _transaction: Option<&mut MockTransaction>, email: &str) -> Result<User, ServerError> {
         let db = self.db.lock().unwrap();
         db.iter().find(|user| user.get_email() == email)
             .cloned()

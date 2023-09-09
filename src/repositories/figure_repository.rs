@@ -55,7 +55,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
                 figure.set_id(id);
                 figure
             })
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     #[instrument(level = "trace", skip(self, transaction))]
@@ -84,7 +84,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .map(|figure_and_profile| figure_and_profile.get_figure_and_profile())
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     #[instrument(level = "trace", skip(self, transaction))]
@@ -146,7 +146,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             })
             .map_err(|e| match e {
             Error::RowNotFound => ServerError::ResourceNotFound,
-            e => ServerError::InternalError(Arc::new(e.into()))
+            e => ServerError::InternalError(e.into())
         })
     }
 
@@ -174,7 +174,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     #[instrument(level = "trace", skip(self, transaction))]
@@ -195,7 +195,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.execute(&self.db).await
         }
             .map(|_result| ())
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     #[instrument(level = "trace", skip(self, transaction))]
@@ -216,7 +216,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     #[instrument(level = "trace", skip(self, transaction))]
@@ -235,6 +235,6 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             None => query.fetch_one(&self.db).await
         }
             .and_then(|row| row.try_get(0))
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }

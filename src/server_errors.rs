@@ -1,10 +1,9 @@
 use serde::{Serialize};
 use std::fmt::{Display, Formatter};
-use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
-use tracing::{error, Instrument};
+use tracing::{error, Instrument, Span};
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -25,7 +24,7 @@ pub enum ServerError {
     MissingFieldInForm,
     InvalidMultipart,
     ImageDimensionsTooLarge,
-    InternalError(Arc<anyhow::Error>),
+    InternalError(anyhow::Error),
 }
 
 impl ServerError {
@@ -85,11 +84,9 @@ impl IntoResponse for ServerError {
             ServerError::InvalidMultipart => StatusCode::BAD_REQUEST,
             ServerError::ImageDimensionsTooLarge => StatusCode::BAD_REQUEST,
             ServerError::InternalError(error) => {
-                let span = tracing::Span::current();
-
                 tokio::task::spawn(async move {
                     error!("Internal server error: {}\n{}", error, error.backtrace());
-                }.instrument(span));
+                }.instrument(Span::current()));
 
                 StatusCode::INTERNAL_SERVER_ERROR
             },

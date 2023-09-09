@@ -22,7 +22,7 @@ impl TransactionManagerTrait<PostgresTransaction> for PostgresTransactionManager
     async fn create(&self) -> Result<PostgresTransaction, ServerError> {
         self.db.begin().await
             .map(PostgresTransaction::new)
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }
 
@@ -43,7 +43,7 @@ impl TransactionTrait for PostgresTransaction {
     type Inner = PgConnection;
     async fn commit(self) -> Result<(), ServerError> {
         self.transaction.commit().await
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     fn inner(&mut self) -> &mut Self::Inner {

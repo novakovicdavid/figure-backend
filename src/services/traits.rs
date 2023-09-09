@@ -10,8 +10,8 @@ use crate::server_errors::ServerError;
 
 #[async_trait]
 pub trait UserServiceTrait: Send + Sync {
-    async fn signup_user(&self, email: String, password: String, username: String) -> Result<(ProfileDTO, Session), ServerError>;
-    async fn authenticate_user(&self, email: String, password: String) -> Result<(ProfileDTO, Session), ServerError>;
+    async fn sign_up(&self, email: &str, password: &str, username: &str) -> Result<(ProfileDTO, Session), ServerError>;
+    async fn sign_in(&self, email: &str, password: &str) -> Result<(ProfileDTO, Session), ServerError>;
 }
 
 #[async_trait]

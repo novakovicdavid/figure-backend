@@ -37,7 +37,7 @@ impl SessionRepositoryTrait for SessionRepository {
         let session_value_json = match serde_json::to_string(&session_in_store) {
             Ok(json) => json,
             Err(e) => {
-                return Err(ServerError::InternalError(Arc::new(e.into())));
+                return Err(ServerError::InternalError(e.into()));
             }
         };
 
@@ -57,7 +57,7 @@ impl SessionRepositoryTrait for SessionRepository {
 
         match result {
             Ok(()) => Ok(session),
-            Err(e) => Err(ServerError::InternalError(Arc::new(e.into())))
+            Err(e) => Err(ServerError::InternalError(e.into()))
         }
     }
 
@@ -77,7 +77,7 @@ impl SessionRepositoryTrait for SessionRepository {
                         value.profile_id,
                         None,
                     ))
-                    .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+                    .map_err(|e| ServerError::InternalError(e.into()))
             }
             Err(_) => Err(ServerError::ResourceNotFound)
         }
@@ -88,6 +88,6 @@ impl SessionRepositoryTrait for SessionRepository {
             .clone()
             .del(session_id)
             .await
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 }

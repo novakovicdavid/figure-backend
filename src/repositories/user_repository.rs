@@ -44,14 +44,14 @@ impl UserRepositoryTrait<PostgresTransaction> for UserRepository {
                         if e.constraint() == Some("user_email_uindex") {
                             return ServerError::EmailAlreadyInUse
                         }
-                        ServerError::InternalError(Arc::new(e.into()))
+                        ServerError::InternalError(e.into())
                     }
-                    _ => ServerError::InternalError(Arc::new(e.into()))
+                    _ => ServerError::InternalError(e.into())
                 }
             })
     }
 
-    async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: String) -> Result<User, ServerError> {
+    async fn find_one_by_email(&self, transaction: Option<&mut PostgresTransaction>, email: &str) -> Result<User, ServerError> {
         let query_string = iformat!(r#"
         SELECT {UserDef::ID} AS {UserDef::ID_UNIQUE}, {UserDef::EMAIL}, {UserDef::PASSWORD}, {UserDef::ROLE}
         FROM {UserDef::TABLE}

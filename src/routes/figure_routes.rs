@@ -43,7 +43,7 @@ async fn get_figures_with_parameters<C: ContextTrait>(State(server_state): State
     let figures = server_state.context.service_context().figure_service().find_figures_starting_from_id_with_profile_id(starting_from_figure_id, profile_id, 3).await;
     match figures {
         Ok(figures) => serde_json::to_string(&figures)
-            .map_err(|error| ServerError::InternalError(Arc::new(error.into())))
+            .map_err(|error| ServerError::InternalError(error.into()))
             .into_response(),
         Err(e) => e.into_response()
     }

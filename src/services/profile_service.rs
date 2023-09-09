@@ -42,7 +42,7 @@ impl<T, P, S> ProfileServiceTrait for ProfileService<T, P, S>
             banner_url = self.storage.upload_image(url.as_str(), banner)
                 .await
                 .map(Some)
-                .map_err(|e| ServerError::InternalError(Arc::new(e.into())))?;
+                .map_err(|e| ServerError::InternalError(e.into()))?;
         }
         if let Some(profile_picture) = profile_picture {
             let url = format!("profile_pictures/{}", Uuid::new_v4());

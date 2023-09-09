@@ -22,6 +22,6 @@ impl RandomNumberGenerator for ChaCha20 {
         self.generator
             .lock()
             .map(|mut generator| generator.next_u64())
-            .map_err(|e| ServerError::InternalError(Arc::new(anyhow::Error::msg(e.to_string()))))
+            .map_err(|e| ServerError::InternalError(anyhow::Error::msg(e.to_string())))
     }
 }

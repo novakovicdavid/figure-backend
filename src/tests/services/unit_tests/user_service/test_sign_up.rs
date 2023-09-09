@@ -8,10 +8,10 @@ use crate::services::traits::UserServiceTrait;
 use crate::tests::services::unit_tests::user_service::helpers::create_user_service_with_mocks;
 
 #[tokio::test]
-pub async fn signup() {
+pub async fn sign_up() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let result = user_service.signup_user("test@test.test".to_string(), "test1234".to_string(), "test".to_string()).await;
+    let result = user_service.sign_up("test@test.test", "test1234", "test").await;
 
     let (profile_dto, session) = result.unwrap();
 
@@ -45,7 +45,7 @@ pub async fn signup() {
 pub async fn signup_password_too_short() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("test@test.test".to_string(), "1234567".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("test@test.test", "1234567", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -57,7 +57,7 @@ pub async fn signup_password_too_short() {
 pub async fn password_too_long() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("test@test.test".to_string(), "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("test@test.test", "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -69,7 +69,7 @@ pub async fn password_too_long() {
 pub async fn signup_missing_at_symbol_in_email() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("testtest.test".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("testtest.test", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -81,7 +81,7 @@ pub async fn signup_missing_at_symbol_in_email() {
 pub async fn signup_missing_tld_in_email() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("test@test".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("test@test", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -93,7 +93,7 @@ pub async fn signup_missing_tld_in_email() {
 pub async fn signup_missing_username_in_email() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("@test.test".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("@test.test", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -105,7 +105,7 @@ pub async fn signup_missing_username_in_email() {
 pub async fn signup_missing_username_and_domain_in_email() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("@".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("@", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -117,7 +117,7 @@ pub async fn signup_missing_username_and_domain_in_email() {
 pub async fn signup_empty_email() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -129,7 +129,7 @@ pub async fn signup_empty_email() {
 pub async fn signup_email_too_long() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("1234567890123456789012345678901234567890123456789012345678901".to_string(), "12345678".to_string(), "test".to_string()).await;
+    let signup_result = user_service.sign_up("1234567890123456789012345678901234567890123456789012345678901", "12345678", "test").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 
@@ -141,7 +141,7 @@ pub async fn signup_email_too_long() {
 pub async fn signup_invalid_username() {
     let (user_service, mocks) = create_user_service_with_mocks();
 
-    let signup_result = user_service.signup_user("test@test.test".to_string(), "12345678".to_string(), "".to_string()).await;
+    let signup_result = user_service.sign_up("test@test.test", "12345678", "").await;
 
     let saved_user = mocks.user_repository.find_by_id(None, 0).await;
 

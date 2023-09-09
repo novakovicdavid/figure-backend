@@ -30,7 +30,7 @@ impl ContentStore for S3Storage {
             .body(ByteStream::from(bytes))
             .send().await
             .map(|_| format!("{}{}", self.base_storage_url, name))
-            .map_err(|e| ServerError::InternalError(Arc::new(e.into())))
+            .map_err(|e| ServerError::InternalError(e.into()))
     }
 
     fn get_base_url(&self) -> String {

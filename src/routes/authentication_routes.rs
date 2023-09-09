@@ -44,7 +44,7 @@ impl From<Session> for SignInResponse {
 }
 
 pub async fn sign_in<C: ContextTrait>(Extension(_session_option): Extension<SessionOption>, State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signin): Json<SignInForm>) -> Response {
-    return match server_state.context.service_context().user_service().authenticate_user(signin.email, signin.password).await {
+    return match server_state.context.service_context().user_service().sign_in(&signin.email, &signin.password).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
@@ -60,7 +60,7 @@ pub async fn sign_in<C: ContextTrait>(Extension(_session_option): Extension<Sess
 }
 
 pub async fn sign_up<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies, Json(signup): Json<SignUpForm>) -> Response {
-    return match server_state.context.service_context().user_service().signup_user(signup.email, signup.password, signup.username).await {
+    return match server_state.context.service_context().user_service().sign_up(&signup.email, &signup.password, &signup.username).await {
         Ok((profile, session)) => {
             let mut cookie = Cookie::new("session_id", session.get_id());
             cookie.set_http_only(true);
