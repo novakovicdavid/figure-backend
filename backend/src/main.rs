@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
     let axum_server = axum::Server::bind(&addr)
         .serve(app.into_make_service());
 
-    info!("Server is up at port {}", server_port);
+    info!("Server is up at port {server_port}");
     info!("Ready to serve in {}ms", time_to_start.elapsed().as_millis());
 
     axum_server.await?;
