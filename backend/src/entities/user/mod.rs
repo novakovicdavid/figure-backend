@@ -1,5 +1,4 @@
 pub mod user;
-pub mod dtos;
 pub mod service;
 pub mod infra;
 pub mod routes;

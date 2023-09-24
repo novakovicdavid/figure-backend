@@ -7,13 +7,13 @@ use crate::server_errors::ServerError;
 use rand_core::OsRng;
 use crate::entities::profile::dtos::ProfileDTO;
 use crate::entities::session::session_dtos::Session;
-use crate::utilities::traits::RandomNumberGenerator;
 use crate::entities::profile::profile::Profile;
 use crate::entities::profile::traits::ProfileRepositoryTrait;
 use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::entities::user::traits::{UserRepositoryTrait, UserServiceTrait};
 use crate::entities::user::user::User;
 use crate::infrastructure::traits::{TransactionManagerTrait, TransactionTrait};
+use crate::utilities::secure_rand_generator::RandomNumberGenerator;
 
 
 #[derive(Clone)]
