@@ -1,7 +1,7 @@
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
 use crate::utilities::types::IdType;
-use crate::entities::user::user::User;
+use crate::entities::user::model::User;
 
 pub struct UserDef;
 

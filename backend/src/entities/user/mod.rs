@@ -1,4 +1,4 @@
-pub mod user;
+pub mod model;
 pub mod service;
 pub mod infra;
 pub mod routes;

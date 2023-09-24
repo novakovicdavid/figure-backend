@@ -1,6 +1,6 @@
 use crate::entities::session::session_dtos::Session;
 use crate::entities::profile::dtos::ProfileDTO;
-use crate::entities::user::user::User;
+use crate::entities::user::model::User;
 use crate::infrastructure::traits::TransactionTrait;
 use crate::server_errors::ServerError;
 use crate::utilities::types::IdType;

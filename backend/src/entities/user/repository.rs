@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres};
-use crate::entities::user::user::User;
+use crate::entities::user::model::User;
 use crate::entities::user::infra::UserDef;
 use crate::server_errors::ServerError;
 use interpol::format as iformat;

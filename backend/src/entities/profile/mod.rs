@@ -1,4 +1,4 @@
-pub mod profile;
+pub mod model;
 pub mod dtos;
 pub mod service;
 pub mod infra;

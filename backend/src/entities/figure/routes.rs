@@ -10,7 +10,7 @@ use image::GenericImageView;
 use crate::context::{ContextTrait, ServiceContextTrait};
 use crate::entities::session::session_dtos::SessionOption;
 use crate::utilities::types::IdType;
-use crate::entities::figure::figure_dto::FiguresWithProfileDTO;
+use crate::entities::figure::dtos::FiguresWithProfileDTO;
 use crate::entities::figure::traits::FigureServiceTrait;
 use crate::server_errors::ServerError;
 use crate::ServerState;

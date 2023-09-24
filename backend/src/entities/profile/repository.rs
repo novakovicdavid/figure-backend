@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sqlx::{Pool, Postgres, Row};
-use crate::entities::profile::profile::Profile;
+use crate::entities::profile::model::Profile;
 use crate::utilities::types::IdType;
 use crate::entities::profile::infra::ProfileDef;
 use crate::server_errors::ServerError;

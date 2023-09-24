@@ -8,7 +8,7 @@ use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use tower_cookies::Cookies;
 use crate::context::{ContextTrait, RepositoryContextTrait, ServiceContextTrait};
-use crate::entities::figure::figure_routes::parse_image_format;
+use crate::entities::figure::routes::parse_image_format;
 use crate::entities::profile::dtos::{ProfileDTO, ProfileWithoutUserIdDTO};
 use crate::entities::profile::traits::ProfileServiceTrait;
 use crate::entities::session::session_dtos::SessionOption;

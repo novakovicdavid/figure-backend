@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
-use crate::entities::profile::profile::Profile;
+use crate::entities::profile::model::Profile;
 use crate::utilities::types::IdType;
 use crate::server_errors::ServerError;
 

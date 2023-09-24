@@ -1,7 +1,7 @@
-pub mod figure_dto;
-pub mod figure;
-pub mod figure_service;
-pub mod figure_infra;
-pub mod figure_routes;
-pub mod figure_repository;
+pub mod dtos;
+pub mod model;
+pub mod service;
+pub mod infra;
+pub mod routes;
+pub mod repository;
 pub mod traits;

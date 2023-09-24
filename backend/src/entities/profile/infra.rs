@@ -1,6 +1,6 @@
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
-use crate::entities::profile::profile::Profile;
+use crate::entities::profile::model::Profile;
 use crate::utilities::types::IdType;
 
 pub struct ProfileDef;

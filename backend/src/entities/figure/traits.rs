@@ -1,7 +1,7 @@
 use bytes::Bytes;
-use crate::entities::figure::figure::Figure;
-use crate::entities::figure::figure_dto::FigureWithProfileDTO;
-use crate::entities::profile::profile::Profile;
+use crate::entities::figure::model::Figure;
+use crate::entities::figure::dtos::FigureWithProfileDTO;
+use crate::entities::profile::model::Profile;
 use crate::infrastructure::traits::TransactionTrait;
 use crate::server_errors::ServerError;
 use crate::utilities::types::IdType;

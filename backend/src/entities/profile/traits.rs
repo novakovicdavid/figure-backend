@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use crate::entities::profile::profile::Profile;
+use crate::entities::profile::model::Profile;
 use crate::infrastructure::traits::TransactionTrait;
 use crate::server_errors::ServerError;
 use crate::utilities::types::IdType;

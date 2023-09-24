@@ -1,7 +1,7 @@
-use crate::entities::profile::profile::Profile;
+use crate::entities::profile::model::Profile;
 use crate::entities::profile::dtos::ProfileDTO;
 use crate::entities::session::session_dtos::Session;
-use crate::entities::user::user::User;
+use crate::entities::user::model::User;
 use crate::infrastructure::traits::{ProfileRepositoryTrait, UserRepositoryTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::UserServiceTrait;
