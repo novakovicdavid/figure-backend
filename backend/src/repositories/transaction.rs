@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::{PgConnection, Pool, Postgres, Transaction};
 use crate::repositories::traits::{TransactionManagerTrait, TransactionTrait};

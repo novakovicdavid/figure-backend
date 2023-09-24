@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::sync::Arc;
 use async_trait::async_trait;
 use argon2::{Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Algorithm::Argon2id;

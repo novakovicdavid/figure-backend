@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
     let env = Environment::new()?;
 
-    init_logging(("INFO", "WARN"), env.loki_host, env.loki_url).expect("Failed to initialize logging!");
+    init_logging(("ERROR", "WARN"), env.loki_host, env.loki_url).expect("Failed to initialize logging!");
 
     info!("Connecting to database...");
     let db_pool_future = task::spawn(async move {

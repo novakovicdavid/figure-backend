@@ -1,5 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
-use sqlx::{ColumnIndex, Error, FromRow, Row};
+use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
 use crate::domain::models::figure::Figure;
 use crate::domain::models::types::IdType;

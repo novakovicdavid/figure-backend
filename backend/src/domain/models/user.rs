@@ -1,12 +1,11 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
 use crate::server_errors::ServerError;
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct User {
     id: IdType,
     email: String,
@@ -103,7 +102,7 @@ lazy_static! {
     Regex::new("^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$").unwrap();
 }
 
-#[derive(Serialize, Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct UserAndProfileFromQuery {
     #[sqlx(flatten)]
     pub user: User,

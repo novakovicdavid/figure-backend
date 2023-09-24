@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use sqlx::{Error, Pool, Postgres, Row};
 use crate::server_errors::ServerError;
 use async_trait::async_trait;
@@ -89,7 +88,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError> {
-        let mut query_string = iformat!(r#"
+        let mut query_string = "
             SELECT figure.id AS u_figure_id, figure.title, figure.description,
             figure.url, figure.width, figure.height, figure.profile_id,
 
@@ -98,7 +97,7 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
             FROM figure
             INNER JOIN profile
             ON figure.profile_id = profile.id
-            "#);
+            ".to_string();
 
         // Select figures with id starting after given figure id
         if let Some(starting_from_id) = figure_id {

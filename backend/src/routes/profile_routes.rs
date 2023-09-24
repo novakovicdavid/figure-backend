@@ -4,9 +4,8 @@ use anyhow::Context;
 use axum::Extension;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::IntoResponse;
 use bytes::Bytes;
-use serde_json::json;
 use crate::context::{ContextTrait, ServiceContextTrait};
 use crate::entities::dtos::profile_dto::ProfileWithoutUserIdDTO;
 use crate::entities::dtos::session_dtos::SessionOption;
@@ -15,43 +14,42 @@ use crate::server_errors::ServerError;
 use crate::ServerState;
 use crate::routes::figure_routes::parse_image_format;
 use crate::services::traits::ProfileServiceTrait;
+use crate::utilities::to_json_string::to_json_string_with_name;
 
-pub async fn get_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, Path(profile_id): Path<IdType>) -> Response {
-    let profile = server_state.context.service_context().profile_service().find_profile_by_id(profile_id).await;
-    match profile {
-        Ok(profile) => {
-            json!({
-                "profile": ProfileWithoutUserIdDTO::from(profile)
-            }).to_string().into_response()
-        },
-        Err(e) => e.into_response()
-    }
+pub async fn get_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, Path(profile_id): Path<IdType>) -> impl IntoResponse {
+    server_state.context.service_context().profile_service()
+        .find_profile_by_id(profile_id)
+        .await
+        .and_then(|profile| Ok(ProfileWithoutUserIdDTO::from(profile)))
+        .map(to_json_string_with_name)
 }
 
-pub async fn get_total_profiles_count<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> Response {
-    match server_state.context.service_context().profile_service().get_total_profiles_count().await {
-        Ok(id) => id.to_string().into_response(),
-        Err(e) => e.into_response()
-    }
+pub async fn get_total_profiles_count<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> impl IntoResponse {
+    server_state.context.service_context().profile_service()
+        .get_total_profiles_count()
+        .await
+        .map(|count| count.to_string())
 }
 
-pub async fn update_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, session: Extension<SessionOption>, multipart: Multipart) -> Response {
+pub async fn update_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, session: Extension<SessionOption>, multipart: Multipart) -> impl IntoResponse {
+    // Check if logged in
     let session = match &session.session_opt {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
     };
 
+    // Parse multipart
     let result = parse_update_profile_multipart(multipart).await;
     let (display_name, bio, banner, profile_picture) = match result {
         Ok(tuple) => tuple,
         Err(_) => return ServerError::InvalidMultipart.into_response()
     };
 
-    match server_state.context.service_context().profile_service()
-        .update_profile_by_id(session.get_profile_id(), display_name, bio, banner, profile_picture).await {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(e) => e.into_response()
-    }
+    // Update profile
+    server_state.context.service_context().profile_service()
+        .update_profile_by_id(session.get_profile_id(), display_name, bio, banner, profile_picture)
+        .await
+        .into_response()
 }
 
 async fn parse_update_profile_multipart(mut multipart: Multipart) -> Result<(Option<String>, Option<String>, Option<Bytes>, Option<Bytes>), anyhow::Error> {
@@ -63,7 +61,7 @@ async fn parse_update_profile_multipart(mut multipart: Multipart) -> Result<(Opt
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().context("Multipart parse failed: no field name")?.to_string();
         let data = field.bytes().await?;
-        println!("{}", name.as_str());
+
         match name.as_str() {
             "display_name" => display_name = Some(String::from_utf8(data.to_vec())?),
             "bio" => bio = Some(String::from_utf8(data.to_vec())?),

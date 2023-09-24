@@ -1,6 +1,5 @@
-use std::sync::Arc;
 use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Row};
+use sqlx::{Pool, Postgres};
 use crate::domain::models::user::User;
 use crate::infrastructure::models::user::UserDef;
 use crate::server_errors::ServerError;

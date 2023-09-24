@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands, Expiry, RedisResult};

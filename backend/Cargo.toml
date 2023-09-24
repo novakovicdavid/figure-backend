@@ -43,6 +43,7 @@ tracing-loki = "0.2.3"
 hyper = "0.14.27"
 http = "0.2.9"
 http-body = "0.4.5"
+derive-name = { git = "https://github.com/novakovicdavid/derive-name.git" }
 
 [profile.release]
 lto = "fat"

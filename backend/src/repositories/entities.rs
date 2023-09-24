@@ -1,11 +1,9 @@
-use serde::{Serialize};
 use sqlx::{Error, FromRow};
 use sqlx::postgres::PgRow;
-use tracing::error;
 use crate::domain::models::figure::Figure;
 use crate::domain::models::profile::Profile;
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct FigureAndProfile {
     figure: Figure,
     profile: Profile

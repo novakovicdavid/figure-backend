@@ -1,9 +1,11 @@
 use serde::Serialize;
-use serde_json::json;
 use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
+use derive_name::with_name;
+
 
 #[derive(Serialize, Debug, PartialEq)]
+#[with_name(profile)]
 pub struct ProfileDTO {
     pub id: IdType,
     pub username: String,
@@ -11,6 +13,7 @@ pub struct ProfileDTO {
 }
 
 #[derive(Serialize, Debug)]
+#[with_name(profile)]
 pub struct ProfileWithoutUserIdDTO {
     pub id: IdType,
     pub username: String,
@@ -18,24 +21,6 @@ pub struct ProfileWithoutUserIdDTO {
     pub bio: Option<String>,
     pub banner: Option<String>,
     pub profile_picture: Option<String>,
-}
-
-impl ProfileDTO {
-    pub fn to_json(&self) -> String {
-        to_json(&self)
-    }
-}
-
-impl ProfileWithoutUserIdDTO {
-    pub fn to_json(&self) -> String {
-        to_json(&self)
-    }
-}
-
-pub fn to_json(profile: &impl Serialize) -> String {
-    json!({
-            "profile": profile
-        }).to_string()
 }
 
 impl From<Profile> for ProfileDTO {

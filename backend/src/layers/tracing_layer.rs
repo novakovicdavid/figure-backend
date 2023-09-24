@@ -7,7 +7,7 @@ use http_body::combinators::UnsyncBoxBody;
 use hyper::Body;
 use tower_http::classify::{ServerErrorsAsFailures, ServerErrorsFailureClass, SharedClassifier};
 use tower_http::trace::TraceLayer;
-use tracing::{debug_span, Span};
+use tracing::{debug_span, error_span, Span};
 use crate::layers::correlation_id_layer::CorrelationId;
 
 pub fn create_tracing_layer()
@@ -31,7 +31,7 @@ pub fn create_tracing_layer()
             let correlation_id = request.extensions()
                 .get::<CorrelationId>();
 
-            debug_span!(
+            error_span!(
                     "http_request",
                     method = ?request.method(),
                     matched_path,

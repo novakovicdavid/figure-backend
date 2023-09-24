@@ -1,12 +1,10 @@
 use lazy_static::lazy_static;
-use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 use crate::domain::models::types::IdType;
 use regex::Regex;
-use tracing::warn;
 use crate::server_errors::ServerError;
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Profile {
     id: IdType,
     username: String,

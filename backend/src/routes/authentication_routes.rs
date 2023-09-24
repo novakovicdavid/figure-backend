@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::sync::Arc;
 use axum::{Extension, Json};
 use axum::extract::State;
@@ -16,6 +15,7 @@ use crate::domain::models::types::IdType;
 use crate::repositories::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
 use crate::services::traits::{ProfileServiceTrait, UserServiceTrait};
+use crate::utilities::to_json_string::to_json_string_with_name;
 
 #[derive(Deserialize)]
 pub struct SignUpForm {
@@ -53,7 +53,7 @@ pub async fn sign_in<C: ContextTrait>(Extension(_session_option): Extension<Sess
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            profile.to_json().into_response()
+            to_json_string_with_name(profile).into_response()
         }
         Err(e) => e.into_response()
     };
@@ -69,7 +69,7 @@ pub async fn sign_up<C: ContextTrait>(State(server_state): State<Arc<ServerState
             cookie.set_domain(server_state.domain.to_string());
             cookie.set_path("/");
             cookies.add(cookie);
-            profile.to_json().into_response()
+            to_json_string_with_name(profile).into_response()
         }
         Err(e) => e.into_response()
     };
@@ -102,7 +102,8 @@ pub async fn load_session<C: ContextTrait>(State(server_state): State<Arc<Server
             Ok(session_data) => {
                 server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id())
                     .await
-                    .map(|profile| ProfileDTO::from(profile).to_json())
+                    .map(ProfileDTO::from)
+                    .map(to_json_string_with_name)
                     .into_response()
             }
             Err(e) => e.into_response()

@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_sdk_s3::{Client, Config, Credentials};

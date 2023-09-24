@@ -4,9 +4,8 @@ use bytes::Bytes;
 use uuid::Uuid;
 use tracing::instrument;
 use crate::content_store::ContentStore;
-use crate::entities::dtos::figure_dto::FigureDTO;
+use crate::entities::dtos::figure_dto::FigureWithProfileDTO;
 use crate::domain::models::figure::Figure;
-use crate::domain::models::profile::Profile;
 use crate::domain::models::types::IdType;
 use crate::repositories::traits::{FigureRepositoryTrait, TransactionTrait};
 use crate::server_errors::ServerError;
@@ -31,16 +30,18 @@ impl<T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore> FigureSe
 #[async_trait]
 impl<T, F, S> FigureServiceTrait for FigureService<T, F, S>
     where T: TransactionTrait, F: FigureRepositoryTrait<T>, S: ContentStore {
-    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError> {
+    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureWithProfileDTO, ServerError> {
         self.figure_repository.find_by_id(None, figure_id)
             .await
-            .map(|(figure, profile)| FigureDTO::from(figure, profile))
+            .map(|(figure, profile)| FigureWithProfileDTO::from(figure, profile))
     }
 
     #[instrument(level = "trace", skip(self))]
-    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError> {
+    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureWithProfileDTO>, ServerError> {
         self.figure_repository.find_starting_from_id_with_profile_id(None, figure_id, profile_id, limit)
             .await
+            .map(|figures_and_profiles| figures_and_profiles.into_iter()
+                .map(|figure_and_profile| FigureWithProfileDTO::from(figure_and_profile.0, figure_and_profile.1)).collect())
     }
 
     async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError> {

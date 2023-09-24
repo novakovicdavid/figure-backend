@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use crate::entities::dtos::figure_dto::FigureDTO;
+use crate::entities::dtos::figure_dto::FigureWithProfileDTO;
 use crate::entities::dtos::profile_dto::ProfileDTO;
 use crate::entities::dtos::session_dtos::Session;
 use crate::domain::models::figure::Figure;
@@ -23,8 +23,8 @@ pub trait ProfileServiceTrait: Send + Sync {
 
 #[async_trait]
 pub trait FigureServiceTrait: Send + Sync {
-    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureDTO, ServerError>;
-    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError>;
+    async fn find_figure_by_id(&self, figure_id: IdType) -> Result<FigureWithProfileDTO, ServerError>;
+    async fn find_figures_starting_from_id_with_profile_id(&self, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<FigureWithProfileDTO>, ServerError>;
     async fn create(&self, title: String, description: Option<String>, image: Bytes, width: u32, height: u32, profile_id: IdType) -> Result<Figure, ServerError>;
     async fn get_total_figures_by_profile(&self, figure_id: IdType) -> Result<IdType, ServerError>;
     async fn get_total_figures_count(&self) -> Result<IdType, ServerError>;
