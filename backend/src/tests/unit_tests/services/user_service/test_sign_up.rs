@@ -1,10 +1,10 @@
 use crate::entities::profile::model::Profile;
 use crate::entities::profile::dtos::ProfileDTO;
+use crate::entities::profile::traits::ProfileRepositoryTrait;
 use crate::entities::session::session_dtos::Session;
 use crate::entities::user::model::User;
-use crate::infrastructure::traits::{ProfileRepositoryTrait, UserRepositoryTrait};
+use crate::entities::user::traits::{UserRepositoryTrait, UserServiceTrait};
 use crate::server_errors::ServerError;
-use crate::services::traits::UserServiceTrait;
 use crate::tests::unit_tests::services::user_service::helpers::create_user_service_with_mocks;
 
 #[tokio::test]

@@ -14,13 +14,8 @@ pub struct Figure {
 }
 
 impl Figure {
-    pub fn new(id: IdType,
-               title: String,
-               description: Option<String>,
-               width: i32,
-               height: i32,
-               url: String,
-               profile_id: IdType) -> Result<Self, ServerError> {
+    pub fn new(id: IdType, title: String, description: Option<String>,
+               width: i32, height: i32, url: String, profile_id: IdType) -> Result<Self, ServerError> {
         Self::check_size(width as u32, height as u32)?;
 
         Ok(Self {
@@ -34,13 +29,8 @@ impl Figure {
         })
     }
 
-    pub fn new_raw(id: IdType,
-                   title: String,
-                   description: Option<String>,
-                   width: i32,
-                   height: i32,
-                   url: String,
-                   profile_id: IdType) -> Self {
+    pub fn new_raw(id: IdType, title: String, description: Option<String>,
+                   width: i32, height: i32, url: String, profile_id: IdType) -> Self {
         Self {
             id,
             title,

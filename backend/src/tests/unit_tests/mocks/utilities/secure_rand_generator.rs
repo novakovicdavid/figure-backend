@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use crate::server_errors::ServerError;
-use crate::utilities::traits::RandomNumberGenerator;
+use crate::utilities::secure_rand_generator::RandomNumberGenerator;
 
 pub struct FakeRandomGenerator {
     state: AtomicU64

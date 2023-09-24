@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 use crate::entities::session::session_dtos::Session;
-use crate::infrastructure::traits::SessionRepositoryTrait;
+use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::server_errors::ServerError;
 
 #[derive(Clone)]
