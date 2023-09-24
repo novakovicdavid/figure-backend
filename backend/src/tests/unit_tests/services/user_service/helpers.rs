@@ -1,4 +1,4 @@
-use crate::services::user_service::UserService;
+use crate::entities::user::service::UserService;
 use crate::tests::unit_tests::mocks::repositories::mock_profile_repository::MockProfileRepository;
 use crate::tests::unit_tests::mocks::repositories::mock_session_repository::MockSessionRepository;
 use crate::tests::unit_tests::mocks::repositories::mock_transaction::{MockTransaction, MockTransactionManager};

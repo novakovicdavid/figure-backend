@@ -3,19 +3,16 @@ mod server_errors;
 mod routes;
 mod tests;
 mod content_store;
-mod services;
-mod repositories;
+mod infrastructure;
 mod context;
 mod utilities;
 mod environment;
-mod domain;
-mod infrastructure;
-mod layers;
+mod middleware;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-use axum::{Extension, middleware, Router};
+use axum::{Extension, middleware as axum_middleware, Router};
 use axum::extract::DefaultBodyLimit;
 use axum::routing::get;
 use axum::routing::post;
@@ -29,27 +26,27 @@ use url::Url;
 use tracing::info;
 use http::Method;
 use http::header::{ACCEPT, CONTENT_TYPE};
-use crate::layers::auth_layer::authenticate;
 use crate::content_store::S3Storage;
 use crate::context::{Context, ContextTrait, RepositoryContext, ServiceContext};
-use crate::entities::dtos::session_dtos::SessionOption;
+use entities::session::session_dtos::SessionOption;
 use crate::environment::Environment;
-use crate::repositories::figure_repository::FigureRepository;
-use crate::repositories::profile_repository::ProfileRepository;
-use crate::repositories::session_repository::SessionRepository;
-use crate::repositories::transaction::PostgresTransactionManager;
-use crate::repositories::user_repository::UserRepository;
-use crate::routes::authentication_routes::{load_session, sign_in, sign_out, sign_up};
-use crate::routes::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
+use entities::figure::figure_repository::FigureRepository;
+use entities::session::session_repository::SessionRepository;
+use crate::infrastructure::transaction::PostgresTransactionManager;
 use crate::routes::misc_routes::healthcheck;
-use crate::routes::profile_routes::{get_profile, get_total_profiles_count, update_profile};
-use crate::services::figure_service::FigureService;
-use crate::services::profile_service::ProfileService;
-use crate::services::user_service::UserService;
+use entities::figure::figure_service::FigureService;
+use entities::profile::service::ProfileService;
+use entities::user::service::UserService;
+use crate::entities::figure::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
+use crate::entities::profile::repository::ProfileRepository;
+use crate::entities::profile::routes::{get_profile, get_total_profiles_count, update_profile};
+use crate::entities::session::layers::session_layer;
+use crate::entities::user::repository::UserRepository;
+use crate::entities::user::routes::{load_session, sign_in, sign_out, sign_up};
 use crate::utilities::logging::init_logging;
 use crate::utilities::secure_rand_generator::ChaCha20;
-use crate::layers::correlation_id_layer::{correlation_id_extension};
-use crate::layers::tracing_layer::create_tracing_layer;
+use crate::middleware::correlation_id_layer::{correlation_id_extension};
+use crate::middleware::tracing_layer::create_tracing_layer;
 
 pub struct ServerState<C: ContextTrait> {
     context: C,
@@ -71,7 +68,7 @@ async fn main() -> anyhow::Result<(), anyhow::Error> {
 
     let env = Environment::new()?;
 
-    init_logging(("ERROR", "WARN"), env.loki_host, env.loki_url).expect("Failed to initialize logging!");
+    init_logging(("INFO", "WARN"), env.loki_host, env.loki_url).expect("Failed to initialize logging!");
 
     info!("Connecting to database...");
     let db_pool_future = task::spawn(async move {
@@ -158,13 +155,13 @@ fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors
         .route("/profiles/count", get(get_total_profiles_count))
         .route("/figures/count", get(get_total_figures_count))
 
-        .layer(middleware::from_fn_with_state(server_state.clone(), authenticate))
+        .layer(axum_middleware::from_fn_with_state(server_state.clone(), session_layer))
         .layer(Extension(authentication_extension))
         .layer(CookieManagerLayer::new())
         .layer(cors)
         .with_state(server_state)
         .layer(create_tracing_layer())
-        .layer(middleware::from_fn(correlation_id_extension))
+        .layer(axum_middleware::from_fn(correlation_id_extension))
 }
 
 fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, content_store: S3Storage, domain: String) -> Arc<ServerState<impl ContextTrait>> {

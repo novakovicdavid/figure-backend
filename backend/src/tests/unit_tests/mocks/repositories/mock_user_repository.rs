@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
-use crate::domain::models::types::IdType;
-use crate::domain::models::user::User;
-use crate::repositories::traits::UserRepositoryTrait;
+use crate::utilities::types::IdType;
+use crate::entities::user::user::User;
+use crate::infrastructure::traits::UserRepositoryTrait;
 use crate::server_errors::ServerError;
 use crate::tests::unit_tests::mocks::repositories::mock_transaction::MockTransaction;
 

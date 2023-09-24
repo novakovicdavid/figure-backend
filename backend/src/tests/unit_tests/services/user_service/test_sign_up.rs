@@ -1,8 +1,8 @@
-use crate::domain::models::profile::Profile;
-use crate::entities::dtos::profile_dto::ProfileDTO;
-use crate::entities::dtos::session_dtos::Session;
-use crate::domain::models::user::User;
-use crate::repositories::traits::{ProfileRepositoryTrait, UserRepositoryTrait};
+use crate::entities::profile::profile::Profile;
+use crate::entities::profile::dtos::ProfileDTO;
+use crate::entities::session::session_dtos::Session;
+use crate::entities::user::user::User;
+use crate::infrastructure::traits::{ProfileRepositoryTrait, UserRepositoryTrait};
 use crate::server_errors::ServerError;
 use crate::services::traits::UserServiceTrait;
 use crate::tests::unit_tests::services::user_service::helpers::create_user_service_with_mocks;

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::repositories::traits::{TransactionManagerTrait, TransactionTrait};
+use crate::infrastructure::traits::{TransactionManagerTrait, TransactionTrait};
 use crate::server_errors::ServerError;
 
 pub struct MockTransactionManager {

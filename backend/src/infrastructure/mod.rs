@@ -1,1 +1,2 @@
-pub mod models;
+pub mod transaction;
+pub mod traits;

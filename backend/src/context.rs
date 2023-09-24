@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
-use crate::repositories::traits::{FigureRepositoryTrait, ProfileRepositoryTrait, SessionRepositoryTrait, TransactionManagerTrait, TransactionTrait, UserRepositoryTrait};
-use crate::services::traits::{FigureServiceTrait, ProfileServiceTrait, UserServiceTrait};
+use crate::entities::figure::traits::{FigureRepositoryTrait, FigureServiceTrait};
+use crate::entities::profile::traits::{ProfileRepositoryTrait, ProfileServiceTrait};
+use crate::entities::session::traits::SessionRepositoryTrait;
+use crate::entities::user::traits::{UserRepositoryTrait, UserServiceTrait};
+use crate::infrastructure::traits::{TransactionManagerTrait, TransactionTrait};
 
 pub trait ContextTrait: Send + Sync {
     type ServiceContext: ServiceContextTrait;
