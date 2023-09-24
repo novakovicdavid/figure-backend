@@ -39,10 +39,10 @@ use entities::profile::service::ProfileService;
 use entities::user::service::UserService;
 use crate::entities::figure::figure_routes::{browse_figures, browse_figures_from_profile, browse_figures_from_profile_starting_from_figure_id, browse_figures_starting_from_figure_id, get_figure, get_total_figures_by_profile, get_total_figures_count, landing_page_figures, upload_figure};
 use crate::entities::profile::repository::ProfileRepository;
-use crate::entities::profile::routes::{get_profile, get_total_profiles_count, update_profile};
+use crate::entities::profile::routes::{get_profile, get_total_profiles_count, load_profile_from_session, update_profile};
 use crate::entities::session::layers::session_layer;
 use crate::entities::user::repository::UserRepository;
-use crate::entities::user::routes::{load_session, sign_in, sign_out, sign_up};
+use crate::entities::user::routes::{sign_in, sign_out, sign_up};
 use crate::utilities::logging::init_logging;
 use crate::utilities::secure_rand_generator::ChaCha20;
 use crate::middleware::correlation_id_layer::{correlation_id_extension};
@@ -143,7 +143,7 @@ fn create_app<C: ContextTrait + 'static>(server_state: Arc<ServerState<C>>, cors
         .route("/users/signup", post(sign_up))
         .route("/users/signin", post(sign_in))
         .route("/session/invalidate", post(sign_out))
-        .route("/session/load", get(load_session))
+        .route("/session/load", get(load_profile_from_session))
         .route("/figures/:id", get(get_figure))
         .route("/figures/browse", get(browse_figures))
         .route("/figures/landing-page", get(landing_page_figures))

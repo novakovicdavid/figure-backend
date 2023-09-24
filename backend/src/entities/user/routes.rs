@@ -95,21 +95,3 @@ pub async fn sign_out<C: ContextTrait>(State(server_state): State<Arc<ServerStat
         ServerError::NoSessionReceived.into_response()
     }
 }
-
-// Return the profile associated with a given session
-pub async fn load_session<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
-    if let Some(cookie) = cookies.get("session_id") {
-        match server_state.context.repository_context().session_repository().find_by_id(cookie.value(), Some(86400)).await {
-            Ok(session_data) => {
-                server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id())
-                    .await
-                    .map(ProfileDTO::from)
-                    .map(to_json_string_with_name)
-                    .into_response()
-            }
-            Err(e) => e.into_response()
-        }
-    } else {
-        ServerError::NoSessionReceived.into_response()
-    }
-}

@@ -4,13 +4,15 @@ use anyhow::Context;
 use axum::Extension;
 use axum::extract::{Multipart, Path, State};
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
-use crate::context::{ContextTrait, ServiceContextTrait};
+use tower_cookies::Cookies;
+use crate::context::{ContextTrait, RepositoryContextTrait, ServiceContextTrait};
 use crate::entities::figure::figure_routes::parse_image_format;
-use crate::entities::profile::dtos::ProfileWithoutUserIdDTO;
+use crate::entities::profile::dtos::{ProfileDTO, ProfileWithoutUserIdDTO};
 use crate::entities::profile::traits::ProfileServiceTrait;
 use crate::entities::session::session_dtos::SessionOption;
+use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::utilities::types::IdType;
 use crate::server_errors::ServerError;
 use crate::ServerState;
@@ -105,4 +107,22 @@ async fn parse_update_profile_multipart(mut multipart: Multipart) -> Result<(Opt
     }
 
     Ok((display_name, bio, banner_option, profile_picture_option))
+}
+
+// Return the profile associated with a given session
+pub async fn load_profile_from_session<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, cookies: Cookies) -> Response {
+    if let Some(cookie) = cookies.get("session_id") {
+        match server_state.context.repository_context().session_repository().find_by_id(cookie.value(), Some(86400)).await {
+            Ok(session_data) => {
+                server_state.context.service_context().profile_service().find_profile_by_id(session_data.get_profile_id())
+                    .await
+                    .map(ProfileDTO::from)
+                    .map(to_json_string_with_name)
+                    .into_response()
+            }
+            Err(e) => e.into_response()
+        }
+    } else {
+        ServerError::NoSessionReceived.into_response()
+    }
 }
