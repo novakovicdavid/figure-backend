@@ -38,7 +38,7 @@ impl Session {
 
 #[derive(Clone, Debug)]
 pub struct SessionOption {
-    pub session_opt: Option<SessionFromStore>,
+    session_opt: Option<SessionFromStore>,
 }
 
 impl SessionOption {
@@ -47,32 +47,18 @@ impl SessionOption {
             session_opt: session,
         }
     }
+
+    pub fn get_session_opt(&self) -> &Option<SessionFromStore> {
+        &self.session_opt
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct SessionFromStore {
-    id: String,
-    user_id: IdType,
     profile_id: IdType,
 }
 
 impl SessionFromStore {
-    pub fn new(id: String, user_id: IdType, profile_id: IdType) -> Self {
-        Self {
-            id,
-            user_id,
-            profile_id,
-        }
-    }
-
-    pub fn get_id(&self) -> String {
-        self.id.clone()
-    }
-
-    pub fn get_user_id(&self) -> IdType {
-        self.user_id
-    }
-
     pub fn get_profile_id(&self) -> IdType {
         self.profile_id
     }
@@ -81,8 +67,6 @@ impl SessionFromStore {
 impl From<Session> for SessionFromStore {
     fn from(value: Session) -> Self {
         Self {
-            id: value.id,
-            user_id: value.user_id,
             profile_id: value.profile_id,
         }
     }

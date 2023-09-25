@@ -184,7 +184,7 @@ fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, conte
     let figure_service = FigureService::new(figure_repository.clone(), content_store);
 
     // Create service and repository contexts
-    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository, transaction_starter);
+    let repository_context = RepositoryContext::new(user_repository, profile_repository, figure_repository, session_repository);
     let service_context = ServiceContext::new(user_service, profile_service, figure_service);
 
     // Combine contexts
@@ -195,9 +195,7 @@ fn create_state(db_pool: Pool<Postgres>, session_store: ConnectionManager, conte
 }
 
 fn create_authentication_extension() -> SessionOption {
-    SessionOption {
-        session_opt: None
-    }
+    SessionOption::new(None)
 }
 
 fn create_app_cors<T: Into<AllowOrigin>>(origins: T) -> CorsLayer {

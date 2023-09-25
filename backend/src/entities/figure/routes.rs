@@ -14,13 +14,13 @@ use crate::entities::figure::dtos::FiguresWithProfileDTO;
 use crate::entities::figure::traits::FigureServiceTrait;
 use crate::server_errors::ServerError;
 use crate::ServerState;
-use crate::utilities::to_json_string::to_json_string;
+use crate::utilities::to_json_string::{to_json_string, to_json_string_with_name};
 
 pub async fn get_figure<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, Path(id): Path<IdType>) -> impl IntoResponse {
     server_state.context.service_context().figure_service()
         .find_figure_by_id(id)
         .await
-        .and_then(to_json_string)
+        .and_then(to_json_string_with_name)
 }
 
 pub async fn browse_figures<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>) -> impl IntoResponse {
@@ -67,7 +67,7 @@ pub async fn get_total_figures_count<C: ContextTrait>(State(server_state): State
 }
 
 pub async fn upload_figure<C: ContextTrait>(session: Extension<SessionOption>, State(server_state): State<Arc<ServerState<C>>>, multipart: Multipart) -> Response {
-    let session = match &session.session_opt {
+    let session = match session.get_session_opt() {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
     };

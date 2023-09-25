@@ -9,8 +9,6 @@ use serde::Deserialize;
 use tower_cookies::Cookies;
 use crate::context::{ContextTrait, RepositoryContextTrait, ServiceContextTrait};
 use crate::ServerState;
-use crate::entities::profile::dtos::ProfileDTO;
-use crate::entities::profile::traits::ProfileServiceTrait;
 use crate::entities::session::session_dtos::{Session, SessionOption};
 use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::entities::user::traits::UserServiceTrait;

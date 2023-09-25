@@ -3,7 +3,7 @@ use crate::entities::figure::traits::{FigureRepositoryTrait, FigureServiceTrait}
 use crate::entities::profile::traits::{ProfileRepositoryTrait, ProfileServiceTrait};
 use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::entities::user::traits::{UserRepositoryTrait, UserServiceTrait};
-use crate::infrastructure::traits::{TransactionManagerTrait, TransactionTrait};
+use crate::infrastructure::traits::TransactionTrait;
 
 pub trait ContextTrait: Send + Sync {
     type ServiceContext: ServiceContextTrait;
@@ -84,7 +84,6 @@ impl<US, PS, FS> ServiceContextTrait for ServiceContext<US, PS, FS>
 
 pub trait RepositoryContextTrait: Send + Sync {
     type Transaction: TransactionTrait;
-    type TransactionManager: TransactionManagerTrait<Self::Transaction>;
     type UserRepository: UserRepositoryTrait<Self::Transaction>;
     type ProfileRepository: ProfileRepositoryTrait<Self::Transaction>;
     type FigureRepository: FigureRepositoryTrait<Self::Transaction>;
@@ -96,38 +95,34 @@ pub trait RepositoryContextTrait: Send + Sync {
     fn session_repository(&self) -> &Self::SessionRepository;
 }
 
-pub struct RepositoryContext<T, UR, PR, FR, SR, TS> {
+pub struct RepositoryContext<T, UR, PR, FR, SR> {
     marker: PhantomData<T>,
     user_repository: UR,
     profile_repository: PR,
     figure_repository: FR,
     session_repository: SR,
-    transaction_starter: TS,
 }
 
-impl<T, UR, PR, FR, SR, TS> RepositoryContext<T, UR, PR, FR, SR, TS> {
+impl<T, UR, PR, FR, SR> RepositoryContext<T, UR, PR, FR, SR> {
     pub fn new(
         user_repository: UR,
         profile_repository: PR,
         figure_repository: FR,
-        session_repository: SR,
-        transaction_starter: TS, ) -> RepositoryContext<T, UR, PR, FR, SR, TS> {
+        session_repository: SR,) -> RepositoryContext<T, UR, PR, FR, SR> {
         RepositoryContext {
             marker: PhantomData::default(),
             user_repository,
             profile_repository,
             figure_repository,
             session_repository,
-            transaction_starter,
         }
     }
 }
 
-impl<T, UR, PR, FR, SR, TS> RepositoryContextTrait for RepositoryContext<T, UR, PR, FR, SR, TS>
+impl<T, UR, PR, FR, SR> RepositoryContextTrait for RepositoryContext<T, UR, PR, FR, SR>
     where T: TransactionTrait, UR: UserRepositoryTrait<T>, PR: ProfileRepositoryTrait<T>,
-          FR: FigureRepositoryTrait<T>, SR: SessionRepositoryTrait, TS: TransactionManagerTrait<T> {
+          FR: FigureRepositoryTrait<T>, SR: SessionRepositoryTrait {
     type Transaction = T;
-    type TransactionManager = TS;
     type UserRepository = UR;
     type ProfileRepository = PR;
     type FigureRepository = FR;

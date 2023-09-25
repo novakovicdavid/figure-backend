@@ -35,7 +35,7 @@ pub async fn get_total_profiles_count<C: ContextTrait>(State(server_state): Stat
 
 pub async fn update_profile<C: ContextTrait>(State(server_state): State<Arc<ServerState<C>>>, session: Extension<SessionOption>, multipart: Multipart) -> impl IntoResponse {
     // Check if logged in
-    let session = match &session.session_opt {
+    let session = match session.get_session_opt() {
         Some(s) => s,
         None => return StatusCode::UNAUTHORIZED.into_response()
     };

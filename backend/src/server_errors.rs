@@ -13,7 +13,6 @@ pub enum ServerError {
     PasswordTooLong,
     EmailAlreadyInUse,
     UsernameAlreadyTaken,
-    UserWithEmailNotFound,
     WrongPassword,
     ResourceNotFound,
     // No session cookie received
@@ -34,7 +33,6 @@ impl ServerError {
             ServerError::PasswordTooLong => "password-too-long",
             ServerError::EmailAlreadyInUse => "email-already-in-use",
             ServerError::UsernameAlreadyTaken => "username-already-taken",
-            ServerError::UserWithEmailNotFound => "user-with-email-not-found",
             ServerError::WrongPassword => "wrong-password",
             ServerError::ResourceNotFound => "resource-not-found",
             ServerError::NoSessionReceived => "no-session-received",
@@ -69,7 +67,6 @@ impl IntoResponse for ServerError {
             ServerError::PasswordTooLong => StatusCode::BAD_REQUEST,
             ServerError::EmailAlreadyInUse => StatusCode::BAD_REQUEST,
             ServerError::UsernameAlreadyTaken => StatusCode::BAD_REQUEST,
-            ServerError::UserWithEmailNotFound => StatusCode::NOT_FOUND,
             ServerError::WrongPassword => StatusCode::BAD_REQUEST,
             ServerError::ResourceNotFound => StatusCode::NOT_FOUND,
             ServerError::NoSessionReceived => StatusCode::BAD_REQUEST,

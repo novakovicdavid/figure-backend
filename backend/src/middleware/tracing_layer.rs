@@ -7,7 +7,7 @@ use http_body::combinators::UnsyncBoxBody;
 use hyper::Body;
 use tower_http::classify::{ServerErrorsAsFailures, ServerErrorsFailureClass, SharedClassifier};
 use tower_http::trace::TraceLayer;
-use tracing::{debug_span, error_span, Span};
+use tracing::{error_span, Span};
 use crate::middleware::correlation_id_layer::CorrelationId;
 
 pub fn create_tracing_layer()

@@ -48,14 +48,6 @@ pub struct FiguresDTO {
     figures: Vec<FigureDTO>,
 }
 
-impl FiguresDTO {
-    pub fn from(figures: Vec<FigureDTO>) -> Self {
-        Self {
-            figures,
-        }
-    }
-}
-
 #[derive(Serialize, Debug)]
 #[with_name(figures)]
 pub struct FiguresWithProfileDTO {
