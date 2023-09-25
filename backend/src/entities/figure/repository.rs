@@ -52,12 +52,12 @@ impl FromRow<'_, PgRow> for FigureAndProfile {
 impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
     #[instrument(level = "trace", skip(self, transaction))]
     async fn create(&self, transaction: Option<&mut PostgresTransaction>, mut figure: Figure) -> Result<Figure, ServerError> {
-        let query_string = iformat!(r#"
+        let query_string = r#"
             INSERT INTO figure
             (id, title, description, width, height, url, profile_id)
             VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)
             RETURNING id;
-            "#);
+            "#;
 
         trace!("Query: {}", query_string);
 
@@ -84,19 +84,19 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn find_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(Figure, Profile), ServerError> {
-        let query_string = iformat!(r#"
-            SELECT
-            figure.id AS u_figure_id, figure.title, figure.description,
-            figure.url, figure.width, figure.height, figure.profile_id,
+        let query_string = r#"
+        SELECT
+        figure.id AS u_figure_id, figure.title, figure.description,
+        figure.url, figure.width, figure.height, figure.profile_id,
 
-            profile.id AS u_profile_id, profile.username, profile.display_name,
-            profile.bio, profile.banner, profile.profile_picture, profile.user_id
+        profile.id AS u_profile_id, profile.username, profile.display_name,
+        profile.bio, profile.banner, profile.profile_picture, profile.user_id
 
-            FROM figure
-            INNER JOIN profile
-            ON figure.profile_id = profile.id
-            WHERE figure.id = $1
-            "#);
+        FROM figure
+        INNER JOIN profile
+        ON figure.profile_id = profile.id
+        WHERE figure.id = $1
+        "#;
 
         trace!("Query: {}", query_string);
 
@@ -113,16 +113,16 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn find_starting_from_id_with_profile_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: Option<IdType>, profile_id: Option<IdType>, limit: i32) -> Result<Vec<(Figure, Profile)>, ServerError> {
-        let mut query_string = "
-            SELECT figure.id AS u_figure_id, figure.title, figure.description,
-            figure.url, figure.width, figure.height, figure.profile_id,
+        let mut query_string = r#"
+        SELECT figure.id AS u_figure_id, figure.title, figure.description,
+        figure.url, figure.width, figure.height, figure.profile_id,
 
-            profile.id AS u_profile_id, profile.username, profile.display_name,
-            profile.bio, profile.banner, profile.profile_picture, profile.user_id
-            FROM figure
-            INNER JOIN profile
-            ON figure.profile_id = profile.id
-            ".to_string();
+        profile.id AS u_profile_id, profile.username, profile.display_name,
+        profile.bio, profile.banner, profile.profile_picture, profile.user_id
+        FROM figure
+        INNER JOIN profile
+        ON figure.profile_id = profile.id
+        "#.to_string();
 
         // Select figures with id starting after given figure id
         if let Some(starting_from_id) = figure_id {
@@ -176,11 +176,11 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn update_figure(&self, transaction: Option<&mut PostgresTransaction>, figure: Figure) -> Result<(), ServerError> {
-        let query_string = iformat!(r#"
-            UPDATE figure
-            SET title = $2, description = $3, url = $4, width = $5, height = $6
-            WHERE id = $1
-            "#);
+        let query_string = r#"
+        UPDATE figure
+        SET title = $2, description = $3, url = $4, width = $5, height = $6
+        WHERE id = $1
+        "#;
 
         trace!("Query: {}", query_string);
 
@@ -203,10 +203,10 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn delete_figure_by_id(&self, transaction: Option<&mut PostgresTransaction>, figure_id: IdType) -> Result<(), ServerError> {
-        let query_string = iformat!(r#"
-            DELETE FROM figure
-            WHERE id = $1
-            "#);
+        let query_string = r#"
+        DELETE FROM figure
+        WHERE id = $1
+        "#;
 
         trace!("Query: {}", query_string);
 
@@ -224,10 +224,10 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn count_by_profile_id(&self, transaction: Option<&mut PostgresTransaction>, profile_id: IdType) -> Result<IdType, ServerError> {
-        let query_string = iformat!(r#"
+        let query_string = r#"
         SELECT count(*) FROM figure
         where profile_id = $1
-        "#);
+        "#;
 
         trace!("Query: {}", query_string);
 
@@ -245,9 +245,9 @@ impl FigureRepositoryTrait<PostgresTransaction> for FigureRepository {
 
     #[instrument(level = "trace", skip(self, transaction))]
     async fn get_total_figures_count(&self, transaction: Option<&mut PostgresTransaction>) -> Result<IdType, ServerError> {
-        let query_string = iformat!(r#"
+        let query_string = r#"
         SELECT count(*) FROM figure
-        "#);
+        "#;
 
         trace!("Query: {}", query_string);
 
