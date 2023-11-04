@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: figure-profile-deployment
+  labels:
+    app: figure-profile-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: figure-profile
+  template:
+    metadata:
+      name: figure-profile
+      labels:
+        app: figure-profile
+    spec:
+      containers:
+        - name: figure-profile
+          image: docker.io/library/figure-profile:v0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+      restartPolicy: Always

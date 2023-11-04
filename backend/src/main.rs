@@ -8,6 +8,7 @@ mod context;
 mod utilities;
 mod environment;
 mod middleware;
+mod domain;
 
 use std::net::SocketAddr;
 use std::sync::Arc;

@@ -1,6 +1,6 @@
 use sqlx::{Error, FromRow, Row};
 use sqlx::postgres::PgRow;
-use crate::entities::figure::model::Figure;
+use crate::domain::figure::Figure;
 use crate::utilities::types::IdType;
 
 impl FromRow<'_, PgRow> for Figure {

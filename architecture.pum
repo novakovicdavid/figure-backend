@@ -1,0 +1,15 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Microservice diagram for Figure
+
+Person(personAlias, "User")
+
+Deployment_Node(plc, "Live", "Big Bank plc"){
+    Container(lool, "lol", "hl", "g")
+
+}
+
+@enduml

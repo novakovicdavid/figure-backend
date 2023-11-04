@@ -5,7 +5,7 @@ use uuid::Uuid;
 use tracing::instrument;
 use crate::content_store::ContentStore;
 use crate::entities::figure::dtos::FigureWithProfileDTO;
-use crate::entities::figure::model::Figure;
+use crate::domain::figure::Figure;
 use crate::entities::figure::traits::{FigureRepositoryTrait, FigureServiceTrait};
 use crate::infrastructure::traits::TransactionTrait;
 use crate::utilities::types::IdType;

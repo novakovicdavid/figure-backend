@@ -5,9 +5,10 @@ use argon2::Algorithm::Argon2id;
 use argon2::password_hash::{Error, SaltString};
 use crate::server_errors::ServerError;
 use rand_core::OsRng;
+use crate::domain::profile::Profile;
 use crate::entities::profile::dtos::ProfileDTO;
 use crate::entities::session::session_dtos::Session;
-use crate::entities::profile::model::Profile;
+
 use crate::entities::profile::traits::ProfileRepositoryTrait;
 use crate::entities::session::traits::SessionRepositoryTrait;
 use crate::entities::user::traits::{UserRepositoryTrait, UserServiceTrait};

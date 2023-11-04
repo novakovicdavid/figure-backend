@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use uuid::Uuid;
 use crate::content_store::ContentStore;
-use crate::entities::profile::model::Profile;
+use crate::domain::profile::Profile;
 use crate::entities::profile::traits::{ProfileRepositoryTrait, ProfileServiceTrait};
 use crate::infrastructure::traits::TransactionTrait;
 use crate::utilities::types::IdType;

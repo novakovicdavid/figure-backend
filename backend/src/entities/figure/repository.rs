@@ -1,13 +1,13 @@
 use sqlx::{Error, FromRow, Pool, Postgres, Row};
 use crate::server_errors::ServerError;
 use async_trait::async_trait;
-use crate::entities::figure::model::Figure;
+use crate::domain::figure::Figure;
 use crate::utilities::types::IdType;
 use interpol::format as iformat;
 use sqlx::postgres::PgRow;
 use tracing::{trace, instrument};
 use crate::entities::figure::traits::FigureRepositoryTrait;
-use crate::entities::profile::model::Profile;
+use crate::domain::profile::Profile;
 use crate::infrastructure::traits::TransactionTrait;
 use crate::infrastructure::transaction::PostgresTransaction;
 

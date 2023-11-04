@@ -1,8 +1,8 @@
 use derive_name::with_name;
 use serde::Serialize;
 use crate::entities::profile::dtos::ProfileDTO;
-use crate::entities::figure::model::Figure;
-use crate::entities::profile::model::Profile;
+use crate::domain::figure::Figure;
+use crate::domain::profile::Profile;
 use crate::utilities::types::IdType;
 
 #[derive(Serialize, Debug)]

@@ -1,0 +1,8 @@
+.gitignore
+.containerignore
+
+.git
+.idea
+
+target
+profile-service-deployment.yaml

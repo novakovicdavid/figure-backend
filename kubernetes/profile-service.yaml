@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: figure-profile-service
+spec:
+  selector:
+    app: figure-profile
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

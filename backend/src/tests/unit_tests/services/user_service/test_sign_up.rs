@@ -1,4 +1,4 @@
-use crate::entities::profile::model::Profile;
+use crate::domain::profile::Profile;
 use crate::entities::profile::dtos::ProfileDTO;
 use crate::entities::profile::traits::ProfileRepositoryTrait;
 use crate::entities::session::session_dtos::Session;
